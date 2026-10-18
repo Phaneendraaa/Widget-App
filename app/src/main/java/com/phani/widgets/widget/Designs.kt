@@ -72,12 +72,31 @@ object Designs {
         small(msg, pad, H - pad - 2f)
     }
 
-    /** Big numeral bottom-aligned with an optional unit beside it. Returns numeral width. */
-    private fun Ctx.bigWithUnit(n: String, unit: String?, base: Float, size: Float, color: Int = p.fg): Float {
-        val w = num(n, pad, base, size, color)
+    /**
+     * Big numeral bottom-aligned with an optional unit beside it, shrunk so it never rises above
+     * [topLimit] or runs past the right edge. Returns numeral width.
+     */
+    private fun Ctx.bigWithUnit(n: String, unit: String?, base: Float, size: Float, color: Int = p.fg, topLimit: Float = 0f): Float {
+        var sz = size
+        if (topLimit > 0f) sz = min(sz, (base - topLimit) / 0.74f)
+        val unitW = if (unit != null) measure(unit, 14f, uiFace(500)) + 6f else 0f
+        val avail = W - 2 * pad - unitW
+        val nw = numW(n, sz)
+        if (nw > avail && nw > 0f) sz *= avail / nw
+        sz = max(sz, 14f)
+        val w = num(n, pad, base, sz, color)
         if (unit != null) text(unit, pad + w + 6f, base - 2f, 14f, uiFace(500), p.fg)
         return w
     }
+
+    /** Largest size (up to [size]) at which [s] fits in [maxW]. */
+    private fun Ctx.fitNum(s: String, size: Float, maxW: Float): Float {
+        val w = numW(s, size)
+        return if (w > maxW && w > 0f) max(10f, size * maxW / w) else size
+    }
+
+    /** Where content may start below the label row. */
+    private val Ctx.below: Float get() = pad + 20f
 
     private fun clampSz(lo: Float, pctOfW: Float, hi: Float, W: Float) = (W * pctOfW).coerceIn(lo, hi)
 
@@ -126,15 +145,20 @@ object Designs {
         when (conf.design) {
             "ring" -> {
                 top("Safe to spend")
-                val btnY = H - pad - 36f
-                val cy = (pad + 18f + btnY - 6f) / 2
-                ring(W / 2, cy, 78f, 7f, 1f - used, if (over) p.acc else p.fg)
+                val bh = min(36f, H * 0.22f)
+                val btnY = H - pad - bh
+                val rs = min(84f, btnY - 6f - below)
+                val sw = max(5f, rs * 0.085f)
+                val cy = below + rs / 2
+                ring(W / 2, cy, rs, sw, 1f - used, if (over) p.acc else p.fg)
                 val bigR = if (over) "−" + Fmt.money(-s.left, 0) else Fmt.money(s.left, 0)
-                num(bigR, W / 2, cy + 3f, 18f, if (over) p.acc else p.fg, C)
-                small(if (over) "over today" else "left today", W / 2, cy + 17f, size = 10f, align = C)
+                val fs = fitNum(bigR, min(19f, rs * 0.25f), rs - 2 * sw - 10f)
+                val showSub = rs >= 66f
+                num(bigR, W / 2, cy + (if (showSub) 1f else cap(fs) / 2), fs, if (over) p.acc else p.fg, C)
+                if (showSub) small(if (over) "over today" else "left today", W / 2, cy + 14f, size = 9.5f, align = C)
                 val bw = (W - 2 * pad - 6f) / 2
-                button(pad, btnY, bw, 36f, "solid", "spend-q", value = q[0].toString(), text = "+${q[0]}")
-                button(pad + bw + 6f, btnY, bw, 36f, "ghost", "spend-open", ic = Paths.plus)
+                button(pad, btnY, bw, bh, "solid", "spend-q", value = q[0].toString(), text = "+${q[0]}")
+                button(pad + bw + 6f, btnY, bw, bh, "ghost", "spend-open", ic = Paths.plus)
             }
             "strip" -> {
                 val lw = wideLeft(66f)
@@ -163,13 +187,15 @@ object Designs {
             }
             else -> {
                 top("Safe to spend")
-                val sz = clampSz(30f, 0.24f, 46f, W)
-                val mid = (pad + 18f + H - pad - 46f) / 2
-                num(big, pad, mid + cap(sz) / 2 - 2f, sz, if (over) p.acc else p.fg)
-                small((if (over) "over " else "left of ") + Fmt.money(s.per) + " today", pad, mid + cap(sz) / 2 + 16f)
+                val bh = min(40f, H * 0.24f)
+                val btnTop = H - pad - bh
+                val subBase = btnTop - 10f
+                val sz = fitNum(big, min(clampSz(30f, 0.24f, 46f, W), (subBase - 18f - below) / 0.74f), W - 2 * pad)
+                num(big, pad, subBase - 18f, sz, if (over) p.acc else p.fg)
+                small((if (over) "over " else "left of ") + Fmt.money(s.per) + " today", pad, subBase, maxW = W - 2 * pad)
                 val bw = (W - 2 * pad - 6f) / 2
-                button(pad, H - pad - 40f, bw, 40f, "solid", "spend-q", value = q[0].toString(), text = "+${q[0]}")
-                button(pad + bw + 6f, H - pad - 40f, bw, 40f, "ghost", "spend-q", value = q[1].toString(), text = "+${q[1]}")
+                button(pad, btnTop, bw, bh, "solid", "spend-q", value = q[0].toString(), text = "+${q[0]}")
+                button(pad + bw + 6f, btnTop, bw, bh, "ghost", "spend-q", value = q[1].toString(), text = "+${q[1]}")
             }
         }
     }
@@ -194,19 +220,21 @@ object Designs {
             }
             "total" -> {
                 top("Subscriptions")
-                val sz = clampSz(28f, 0.22f, 42f, W)
-                val base = H / 2 + cap(sz) / 2 - 4f
-                num(Fmt.money(subsMonthly(), 0), pad, base, sz)
+                val tot = Fmt.money(subsMonthly(), 0)
+                val base = H - pad - 40f
+                val sz = fitNum(tot, min(clampSz(28f, 0.22f, 42f, W), (base - below) / 0.74f), W - 2 * pad)
+                num(tot, pad, base, sz)
                 small("a month · " + plural(D.subs.size, "plan"), pad, base + 18f)
                 small("Next: ${l[0].s.name} in ${l[0].days}d", pad, H - pad - 2f, maxW = W - 2 * pad)
             }
             else -> {
                 val r = l[0]
                 top("Next charge")
-                t2(r.s.name, pad, pad + 36f, 17f, maxW = W - 2 * pad)
+                val nameBase = if (showLabel) pad + 36f else pad + 16f
+                t2(r.s.name, pad, nameBase, 17f, maxW = W - 2 * pad)
                 val sz = clampSz(40f, 0.32f, 64f, W)
                 val base = H - pad - 24f
-                bigWithUnit(if (r.days == 0) "Today" else r.days.toString(), if (r.days == 0) null else if (r.days == 1) "day" else "days", base, sz, if (r.days <= 3) p.acc else p.fg)
+                bigWithUnit(if (r.days == 0) "Today" else r.days.toString(), if (r.days == 0) null else if (r.days == 1) "day" else "days", base, sz, if (r.days <= 3) p.acc else p.fg, nameBase + 8f)
                 small(Fmt.money(r.s.amt) + " · " + Fmt.short(r.d), pad, H - pad - 2f)
             }
         }
@@ -227,8 +255,8 @@ object Designs {
             }
             "big" -> {
                 top(if (f.on) "Fasting" else "Fast")
-                val sz = clampSz(44f, 0.36f, 70f, W)
                 val base = H - pad - 36f
+                val sz = min(clampSz(44f, 0.36f, 70f, W), (base - below) / 0.74f)
                 val w = num(if (f.on) floor(f.h).toInt().toString() else "0", pad, base, sz)
                 text("h " + (if (f.on) ((f.h % 1) * 60).toInt().toString().padStart(2, '0') else "00") + "m", pad + w + 4f, base - 2f, 15f, uiFace(500), p.fg)
                 bar(pad, base + 10f, W - 2 * pad, 3f, f.pct.toFloat(), p.acc)
@@ -237,11 +265,16 @@ object Designs {
             }
             else -> {
                 top(if (f.on) "Fasting" else "Fast", "${f.target}h")
-                val btnY = H - pad - 36f
-                val cy = (pad + 18f + btnY - 6f) / 2
-                ring(W / 2, cy, 76f, 7f, f.pct.toFloat(), p.acc)
-                num(if (f.on) Fmt.hhmm(f.h) else "—", W / 2, cy + 7f, 19f, align = C)
-                button(pad, btnY, W - 2 * pad, 36f, if (f.on) "ghost" else "solid", "fast", text = if (f.on) "End" else "Start", ic = if (f.on) Paths.stop else Paths.play, icFilled = true, icSize = 14f)
+                val bh = min(36f, H * 0.22f)
+                val btnY = H - pad - bh
+                val rs = min(84f, btnY - 6f - below)
+                val sw = max(5f, rs * 0.085f)
+                val cy = below + rs / 2
+                ring(W / 2, cy, rs, sw, f.pct.toFloat(), p.acc)
+                val tx = if (f.on) Fmt.hhmm(f.h) else "—"
+                val fs = fitNum(tx, min(20f, rs * 0.26f), rs - 2 * sw - 10f)
+                num(tx, W / 2, cy + cap(fs) / 2, fs, align = C)
+                button(pad, btnY, W - 2 * pad, bh, if (f.on) "ghost" else "solid", "fast", text = if (f.on) "End" else "Start", ic = if (f.on) Paths.stop else Paths.play, icFilled = true, icSize = 14f)
             }
         }
     }
@@ -269,27 +302,28 @@ object Designs {
                 top(ct.name, "of ${ct.goal}")
                 val sz = clampSz(46f, 0.38f, 74f, W)
                 val base = H - pad - 26f
-                bigWithUnit(v.toString(), ct.unit, base, sz, if (v >= ct.goal) p.acc else p.fg)
+                bigWithUnit(v.toString(), ct.unit, base, sz, if (v >= ct.goal) p.acc else p.fg, below + 4f)
                 small(if (v >= ct.goal) "Goal reached" else "Tap the number to add 1", pad, H - pad - 2f, maxW = W - 2 * pad)
                 hitArea(0f, pad + 18f, W, H - pad - 40f, "cnt", ct.id)
             }
             else -> {
                 top(ct.name, "$v/${ct.goal}")
-                val gh = 58f; val gw = 54f
-                val nw = numW(v.toString(), 34f)
+                val gh = min(58f, H - pad - 22f - below - 8f).coerceAtLeast(30f); val gw = gh * 54f / 58f
+                val gfs = min(34f, gh * 0.6f)
+                val nw = numW(v.toString(), gfs)
                 val total = gw + 12f + nw
                 val gx = W / 2 - total / 2
-                val gy = (pad + 18f + H - pad - 18f) / 2 - gh / 2
+                val gy = (below + H - pad - 18f) / 2 - gh / 2
                 val glass = Path().apply {
-                    moveTo(px(gx + 6f), px(gy + 4f)); lineTo(px(gx + 48f), px(gy + 4f)); lineTo(px(gx + 43f), px(gy + gh - 2f))
-                    lineTo(px(gx + 11f), px(gy + gh - 2f)); close()
+                    moveTo(px(gx + gw * 0.11f), px(gy + 4f)); lineTo(px(gx + gw * 0.89f), px(gy + 4f)); lineTo(px(gx + gw * 0.8f), px(gy + gh - 2f))
+                    lineTo(px(gx + gw * 0.2f), px(gy + gh - 2f)); close()
                 }
                 c.save(); c.clipPath(glass)
                 val fillH = (gh - 6f) * pct
                 rrect(gx, gy + gh - 2f - fillH, gw, fillH + 2f, 0f, fill(p.acc))
                 c.restore()
                 c.drawPath(glass, stroke(p.fg, 2f).apply { strokeJoin = Paint.Join.ROUND })
-                num(v.toString(), gx + gw + 12f, gy + gh / 2 + cap(34f) / 2, 34f)
+                num(v.toString(), gx + gw + 12f, gy + gh / 2 + cap(gfs) / 2, gfs)
                 small("Tap to add 1", W / 2, H - pad - 2f, align = C)
                 hitArea(0f, pad + 18f, W, H - pad - 18f, "cnt", ct.id)
             }
@@ -345,14 +379,15 @@ object Designs {
                 top("${h.name} · $rec")
                 val sz = clampSz(44f, 0.36f, 70f, W)
                 val base = H - pad - 26f
-                bigWithUnit(st.n.toString(), "days", base, sz)
+                bigWithUnit(st.n.toString(), "days", base, sz, topLimit = below + 4f)
                 dots(pad, H - pad - 6f, 11f, 4f)
                 hitArea(0f, pad + 18f, W, H - pad - 40f, "hab", h.id)
             }
             "ring" -> {
                 top(h.name)
-                val cy = (pad + 18f + H - pad - 18f) / 2
-                val r = 36f
+                val rs = min(88f, H - pad - 16f - below - 6f)
+                val cy = below + rs / 2
+                val r = rs / 2 - 4.5f
                 val segDeg = 360f / 7
                 for (i in 0 until 7) {
                     val k = t0.minusDays((6 - i).toLong()).toString()
@@ -402,15 +437,18 @@ object Designs {
                 small("Needed per day", pad, pad + 36f)
                 val sz = clampSz(38f, 0.30f, 60f, W)
                 val base = H - pad - 24f
-                bigWithUnit(Fmt.num(r.per), g.unit, base, sz)
+                bigWithUnit(Fmt.num(r.per), g.unit, base, sz, topLimit = pad + 44f)
                 val w = small(stTxt, pad, H - pad - 2f, stCol, weight = 600)
                 small(" · ${r.left}d left", pad + w, H - pad - 2f, p.fg)
             }
             else -> {
                 top(g.name)
-                val cy = (pad + 18f + H - pad - 34f) / 2
-                ring(pad + 24f, cy, 48f, 6f, r.pct.toFloat(), if (a <= -1) p.acc else p.fg)
-                num("${(r.pct * 100).roundToInt()}%", pad + 60f, cy + cap(22f) / 2, 22f)
+                val rs = min(48f, H - pad - 38f - below - 4f)
+                val cy = below + 2f + rs / 2
+                ring(pad + rs / 2, cy, rs, 6f, r.pct.toFloat(), if (a <= -1) p.acc else p.fg)
+                val pt = "${(r.pct * 100).roundToInt()}%"
+                val pfs = fitNum(pt, 22f, W - 2 * pad - rs - 12f)
+                num(pt, pad + rs + 12f, cy + cap(pfs) / 2, pfs)
                 text("$per a day", pad, H - pad - 18f, 12.5f, uiFace(600), p.fg, maxW = W - 2 * pad)
                 small(stTxt, pad, H - pad - 2f, stCol, weight = 600, maxW = W - 2 * pad)
                 hitArea(0f, pad + 18f, W, H - pad - 50f, "goal", g.id)
@@ -463,17 +501,19 @@ object Designs {
             }
             "ring" -> {
                 top(d.name)
-                val cy = (pad + 18f + H - pad - 18f) / 2
-                ring(W / 2, cy, 80f, 7f, prog, p.acc)
-                num(n.days.toString(), W / 2, cy + 6f, 28f, align = C)
-                small(if (n.days == 1) "day" else "days", W / 2, cy + 20f, size = 10.5f, align = C)
+                val rs = min(84f, H - pad - 16f - below - 6f)
+                val cy = below + rs / 2
+                ring(W / 2, cy, rs, max(5f, rs * 0.085f), prog, p.acc)
+                val fs = fitNum(n.days.toString(), min(28f, rs * 0.34f), rs - 22f)
+                num(n.days.toString(), W / 2, cy + (if (rs >= 64f) 4f else cap(fs) / 2), fs, align = C)
+                if (rs >= 64f) small(if (n.days == 1) "day" else "days", W / 2, cy + 17f, size = 10f, align = C)
                 small(Fmt.full(n.d), W / 2, H - pad - 2f, align = C)
             }
             else -> {
                 top(d.name)
                 val sz = clampSz(44f, 0.36f, 70f, W)
                 val base = H - pad - 34f
-                bigWithUnit(if (n.days == 0) "Today" else n.days.toString(), if (n.days == 0) null else if (n.days == 1) "day" else "days", base, sz)
+                bigWithUnit(if (n.days == 0) "Today" else n.days.toString(), if (n.days == 0) null else if (n.days == 1) "day" else "days", base, sz, topLimit = below + 4f)
                 bar(pad, base + 12f, W - 2 * pad, 3f, prog, p.acc)
                 small(Fmt.full(n.d), pad, H - pad - 2f)
             }
@@ -508,9 +548,12 @@ object Designs {
             }
             "ring" -> {
                 top(t0.year.toString())
-                val cy = (pad + 18f + H - pad - 18f) / 2
-                ring(W / 2, cy, 80f, 7f, yp, p.acc)
-                num("${floor(yp * 100).toInt()}%", W / 2, cy + cap(26f) / 2, 26f, align = C)
+                val rs = min(84f, H - pad - 16f - below - 6f)
+                val cy = below + rs / 2
+                ring(W / 2, cy, rs, max(5f, rs * 0.085f), yp, p.acc)
+                val yt = "${floor(yp * 100).toInt()}%"
+                val fs = fitNum(yt, min(26f, rs * 0.32f), rs - 22f)
+                num(yt, W / 2, cy + cap(fs) / 2, fs, align = C)
                 small("${n - dn - 1} days left", W / 2, H - pad - 2f, align = C)
             }
             else -> {
@@ -637,8 +680,8 @@ object Designs {
                 val s = subjectBy(conf.ref) ?: D.subjects.minByOrNull { att(it).p }!!
                 val r = att(s)
                 top("${s.short} · need ${D.req}%")
-                val sz = clampSz(40f, 0.34f, 64f, W)
-                val base = (pad + 18f + H - pad - 32f) / 2 + cap(sz) / 2
+                val base = H - pad - 40f
+                val sz = min(clampSz(40f, 0.34f, 64f, W), (base - below) / 0.74f)
                 val w = num("${(r.p * 100).roundToInt()}", pad, base, sz, if (r.ok) p.fg else p.acc)
                 num("%", pad + w, base, sz * 0.45f, if (r.ok) p.fg else p.acc)
                 bar(pad, H - pad - 28f, W - 2 * pad, 6f, r.p.toFloat(), if (r.ok) p.fg else p.acc, D.req / 100f)

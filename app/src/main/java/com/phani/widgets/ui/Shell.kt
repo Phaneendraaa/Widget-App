@@ -77,7 +77,7 @@ private fun PillNav() {
         Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(32.dp)).background(p.nav)
             .border(1.dp, p.line, RoundedCornerShape(32.dp)).padding(6.dp),
     ) {
-        listOf(Triple("home", "Home", Ic.home), Triple("gallery", "Widgets", Ic.grid), Triple("track", "Track", Ic.track), Triple("settings", "Settings", Ic.gear))
+        listOf(Triple("home", "My widgets", Ic.home), Triple("gallery", "New", Ic.plus), Triple("track", "My info", Ic.track), Triple("settings", "Settings", Ic.gear))
             .forEach { (k, l, ic) -> NavItem(k, l, ic, Modifier.weight(1f)) }
     }
 }

@@ -72,7 +72,7 @@ class Ctx(val c: Canvas, val wPx: Float, val hPx: Float, val k: Float, val p: WP
     val hits = ArrayList<Hit>()
     val W = wPx / k
     val H = hPx / k
-    val pad = 16f
+    val pad = if (min(W, H) < 150f) 13f else 16f
     val showLabel = conf.label
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)

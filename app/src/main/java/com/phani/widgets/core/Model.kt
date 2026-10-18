@@ -57,6 +57,7 @@ class AppData(
     val sched: MutableMap<Int, MutableList<SchedItem>>,
     val placed: MutableList<WConf>,
     val bound: MutableMap<Int, WConf>,
+    var howSeen: Boolean = false,
 )
 
 /* ---------------- JSON ---------------- */
@@ -107,6 +108,7 @@ fun AppData.toJson(): JSONObject {
     o.put("placed", JSONArray(placed.map { it.toJson() }))
     val b = JSONObject(); bound.forEach { (k, v) -> b.put(k.toString(), v.toJson()) }
     o.put("bound", b)
+    o.put("howSeen", howSeen)
     return o
 }
 
@@ -147,6 +149,7 @@ fun appDataFrom(o: JSONObject): AppData {
         sched = sched,
         placed = o.getJSONArray("placed").objs().map { wconf(it) }.toMutableList(),
         bound = bound,
+        howSeen = o.optBoolean("howSeen", false),
     )
 }
 

@@ -48,105 +48,13 @@ val WALLS = linkedMapOf(
 
 fun wall() = WALLS[AppStore.data.wall] ?: WALLS.getValue("stone")
 
-object HomeState {
-    var edit by mutableStateOf(false)
-}
-
-fun runHit(hit: com.phani.widgets.widget.Hit) {
-    val r = com.phani.widgets.core.Actions.run(hit.act, hit.id, hit.value)
-    if (r.openSpend) { TrackState.open("spend"); return }
-    if (r.msg != null) Toaster.show(r.msg, r.undo)
-}
-
-@Composable
-fun HomeScreen() {
-    val p = pal()
-    val d = AppStore.data
-    val edit = HomeState.edit
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    ClockTicker()
-    TopBar("Home", if (edit) "Tap a widget to restyle it. + puts it on your phone." else "Live widgets. Tap the buttons on them.") {
-        ChipButton(if (edit) "Done" else "Edit", solid = edit, icon = if (edit) null else Ic.brush) { HomeState.edit = !edit }
-    }
-    val (wbg, wfg) = wall()
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(34.dp)).background(wbg).padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 18.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp).padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(Fmt.now(), style = T.smallB, color = wfg)
-            Text(Fmt.full(today()), style = T.smallB, color = wfg)
-        }
-        // pack small widgets two per row, wide and large ones full width
-        val rows = mutableListOf<List<Int>>()
-        var pending: Int? = null
-        d.placed.forEachIndexed { i, w ->
-            if (w.size == "s") {
-                if (pending == null) pending = i else { rows.add(listOf(pending!!, i)); pending = null }
-            } else {
-                if (pending != null) { rows.add(listOf(pending!!)); pending = null }
-                rows.add(listOf(i))
-            }
-        }
-        if (pending != null) rows.add(listOf(pending!!))
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            rows.forEach { r ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    r.forEach { i ->
-                        val conf = d.placed[i]
-                        val full = conf.size != "s"
-                        Box(if (full) Modifier.fillMaxWidth() else Modifier.weight(1f)) {
-                            WidgetView(conf, live = !edit, onTap = { if (edit) Sheets.customEdit(i) }) { runHit(it) }
-                            if (edit) Row(Modifier.align(Alignment.TopEnd).padding(top = 0.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                EditDot(Ic.plus) {
-                                    if (!com.phani.widgets.widget.Widgets.requestPin(ctx, conf)) Toaster.show("Long-press your home screen, tap Widgets, then pick Widget App")
-                                }
-                                if (i > 0) EditDot(Ic.up) { AppStore.change { val x = placed.removeAt(i); placed.add(i - 1, x) } }
-                                EditDot(Ic.x) { AppStore.change(true) { placed.removeAt(i) }; Toaster.show("Widget removed", true) }
-                            }
-                        }
-                        if (!full && r.size == 1) Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
-            Box(
-                Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(24.dp)).background(wfg.copy(alpha = 0.06f))
-                    .border(1.5.dp, wfg.copy(alpha = 0.45f), RoundedCornerShape(24.dp)).clickable { Nav.tab = "gallery" },
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Ic.plus, null, tint = wfg, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text("Add widget", style = T.bodyB, color = wfg)
-                }
-            }
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 22.dp).height(68.dp).clip(RoundedCornerShape(26.dp)).background(Color.White.copy(alpha = 0.26f)),
-            horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
-            repeat(4) { Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = 0.5f))) }
-        }
-    }
-    Row(Modifier.padding(top = 16.dp, start = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        WALLS.forEach { (k, v) -> Swatch(v.first, d.wall == k) { AppStore.change { wall = k } } }
-    }
-    if (d.sampleData) {
-        Spacer(Modifier.height(10.dp))
-        SampleBanner("Showing example data.", "Make it yours") { Nav.tab = "track"; TrackState.tab = "money" }
-    }
-}
-
-@Composable
-private fun EditDot(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    val p = pal()
-    Box(Modifier.offset(x = 6.dp, y = (-8).dp).size(32.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, null, tint = p.paper, modifier = Modifier.size(16.dp))
-    }
-}
-
 object GalleryState { var cat by mutableStateOf("all") }
 
 @Composable
 fun GalleryScreen() {
     val p = pal()
     val d = AppStore.data
-    TopBar("Widgets", "${com.phani.widgets.core.Catalog.types.size} widgets · ${com.phani.widgets.core.Catalog.totalDesigns} designs · all offline") {
+    TopBar("New widget", "Tap one to pick its design, look and what it shows.") {
         if (d.pro) Pill("Pro", "good") else ChipButton("Get Pro", solid = true) { Sheets.showPaywall() }
     }
     Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

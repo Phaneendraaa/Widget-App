@@ -131,7 +131,18 @@ fun Onboarding() {
         Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, androidx.compose.ui.Alignment.CenterHorizontally)) {
             (0..2).forEach { i -> Box(Modifier.height(6.dp).width(if (i == step) 20.dp else 6.dp).clip(RoundedCornerShape(3.dp)).background(if (i == step) p.ink else p.soft)) }
         }
-        BigButton(if (step < 2) "Continue" else "Start") { if (step < 2) step++ else finish() }
+        if (step < 2) BigButton("Continue") { step++ }
+        else {
+            BigButton("Start with my own info") {
+                AppStore.change {
+                    subs.clear(); habits.clear(); goals.clear(); dates.clear(); subjects.clear(); counters.clear(); placed.clear(); sched.clear(); log.clear()
+                    fast.start = null; fast.history.clear(); sampleData = false
+                }
+                finish(); Nav.tab = "home"
+            }
+            Spacer(Modifier.height(10.dp))
+            BigButton("Look around with examples first", kind = "ghost") { finish() }
+        }
     }
 }
 

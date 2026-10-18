@@ -61,6 +61,7 @@ object Sheets {
     var custom by mutableStateOf<WConf?>(null)
     var customIndex by mutableStateOf(-1)
     var paywall by mutableStateOf<String?>(null)
+    var help by mutableStateOf(false)
     var open by mutableStateOf(false)
 
     fun customNew(type: String) { custom = Catalog.newConf(type); customIndex = -1 }
@@ -98,6 +99,9 @@ fun SheetHost() {
     val pw = Sheets.paywall
     if (pw != null) PaywallSheet(pw)
     TrackSheetHost()
+    val a = Flow.actions
+    if (a != null) WidgetActionsSheet(a)
+    if (Sheets.help) HelpSheet { Sheets.help = false }
 }
 
 @Composable
@@ -118,6 +122,7 @@ private fun CustomizeSheet(start: WConf) {
             WidgetView(cu.copy(id = "pv"), Modifier.widthIn(max = if (cu.size == "s") 168.dp else 340.dp), live = false)
         }
         if (!editing) Text(t.desc, style = T.body, color = p.muted)
+        DataCard(cu)
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             FieldLabel("Design")
@@ -222,7 +227,7 @@ private fun CustomizeSheet(start: WConf) {
         }
 
         val d = AppStore.data
-        BigButton(if (locked) "Unlock Pro to use this" else if (editing) "Save changes" else "Add to Home Screen", icon = if (locked) Ic.lock else null) {
+        BigButton(if (locked) "Unlock Pro to use this" else if (editing) "Save changes" else "Add widget", icon = if (locked) Ic.lock else null) {
             when {
                 locked -> Sheets.showPaywall("This look is part of Pro")
                 editing -> {
@@ -234,9 +239,9 @@ private fun CustomizeSheet(start: WConf) {
                 else -> {
                     val conf = cu.copy(id = com.phani.widgets.core.uid())
                     AppStore.change { placed.add(conf) }
-                    close(); Nav.tab = "home"; HomeState.edit = false
+                    close(); Nav.tab = "home"
                     val pinned = Widgets.requestPin(ctx, conf)
-                    Toaster.show(if (pinned) "${t.name} added. Confirm to place it on your home screen." else "${t.name} added to Home")
+                    if (pinned) Toaster.show("${t.name} added. Confirm on the next screen to put it on your phone.") else { Toaster.show("${t.name} added to My widgets"); Sheets.help = true }
                 }
             }
         }
@@ -246,7 +251,7 @@ private fun CustomizeSheet(start: WConf) {
             AppStore.change(true) { if (i in placed.indices) placed.removeAt(i) }
             close(); Toaster.show("Widget removed", true)
         }
-        else Text("This also places the widget on your phone's home screen.", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        else Text("Next, your phone asks where to place it on your home screen.", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }
 }
 

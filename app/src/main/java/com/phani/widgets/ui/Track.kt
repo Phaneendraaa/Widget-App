@@ -109,8 +109,8 @@ private fun RoundIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, sol
 fun TrackScreen() {
     val p = pal()
     val d = AppStore.data
-    TopBar("Track", "Everything your widgets read from.")
-    if (d.sampleData) SampleBanner("Example data. Edit it, or start clean.", "Start clean") { TrackState.open("clear") }
+    TopBar("Your info", "Widgets read from here. Change something and every widget updates.")
+    if (d.sampleData) SampleBanner("This is example data.", "Use my own") { TrackState.open("clear") }
     Row(Modifier.fillMaxWidth().padding(top = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         TABS.forEach { (k, l) ->
             val on = TrackState.tab == k
@@ -686,15 +686,15 @@ private fun SchedSheet(close: () -> Unit) {
 
 @Composable
 private fun ClearSheet(close: () -> Unit) {
-    Sheet("Start clean?", close) {
-        Text("This removes everything you track and every widget on your Home. You can load the example data again from Settings.", style = T.body, color = pal().ink)
-        BigButton("Delete everything", kind = "danger") {
+    Sheet("Use your own info?", close) {
+        Text("This clears the example data and the example widgets so you can add your own. You can bring the examples back in Settings.", style = T.body, color = pal().ink)
+        BigButton("Clear examples", kind = "danger") {
             AppStore.change(true) {
                 subs.clear(); habits.clear(); goals.clear(); dates.clear(); subjects.clear(); clocks.clear(); counters.clear()
                 placed.clear(); sched.clear(); log.clear(); sampleData = false; fast.start = null; fast.history.clear()
             }
-            close(); Toaster.show("All data deleted", true)
+            close(); Nav.tab = "home"; Toaster.show("Cleared. Tap New to make your first widget.", true)
         }
-        BigButton("Keep my data", kind = "ghost", onClick = close)
+        BigButton("Keep the examples", kind = "ghost", onClick = close)
     }
 }
