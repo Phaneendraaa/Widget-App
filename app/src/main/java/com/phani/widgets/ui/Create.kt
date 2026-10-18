@@ -142,6 +142,7 @@ fun widgetName(c: WConf): String {
 
 @Composable
 fun CreateScreen() {
+    AppStore.rev
     val p = pal()
     AppStore.rev
     BackHandler { Create.back() }
@@ -167,6 +168,7 @@ fun CreateScreen() {
 
 @Composable
 private fun RoundBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, onClick: () -> Unit) {
+    AppStore.rev
     val p = pal()
     Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, desc, tint = p.ink, modifier = Modifier.size(22.dp))
@@ -175,6 +177,7 @@ private fun RoundBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc
 
 @Composable
 private fun StepDots(step: Int) {
+    AppStore.rev
     val p = pal()
     val names = listOf("Pick", "Your info", "Style", "Add")
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -189,6 +192,7 @@ private fun StepDots(step: Int) {
 /** Title + scrolling body + a fixed bottom button: the shape of every step. */
 @Composable
 private fun ColumnScope.StepBody(title: String, sub: String?, top: (@Composable () -> Unit)? = null, bottom: @Composable () -> Unit, body: @Composable ColumnScope.() -> Unit) {
+    AppStore.rev
     val p = pal()
     if (top != null) Box(Modifier.padding(horizontal = Pad)) { top() }
     Column(
@@ -207,6 +211,7 @@ private fun ColumnScope.StepBody(title: String, sub: String?, top: (@Composable 
 /** The widget at a fixed size on a wallpaper-coloured backdrop. */
 @Composable
 fun Preview(c: WConf, sample: Boolean = false, modifier: Modifier = Modifier) {
+    AppStore.rev
     val (wbg, _) = wall()
     Box(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(wbg).padding(vertical = 18.dp, horizontal = 18.dp), contentAlignment = Alignment.Center) {
         WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = false, sample = sample)
@@ -216,6 +221,7 @@ fun Preview(c: WConf, sample: Boolean = false, modifier: Modifier = Modifier) {
 /** A widget shrunk to fit a box, for thumbnails. */
 @Composable
 fun Thumb(c: WConf, boxW: Float, boxH: Float, sample: Boolean = false, onTap: (() -> Unit)? = null) {
+    AppStore.rev
     val bw = if (c.size == "s") 160f else 330f
     val bh = preferredHeight(c, bw)
     val k = minOf((boxW - 8f) / bw, (boxH - 8f) / bh)
@@ -228,6 +234,7 @@ fun Thumb(c: WConf, boxW: Float, boxH: Float, sample: Boolean = false, onTap: ((
 
 @Composable
 private fun ColumnScope.PickStep() {
+    AppStore.rev
     val p = pal()
     val size = Create.size
     val types = Catalog.visible.filter { t -> size == null || t.designs.any { it.size == size } }
@@ -244,8 +251,8 @@ private fun ColumnScope.PickStep() {
                     Column(Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(p.card).clickable { Create.pick(t.type) }.padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         val (wbg, _) = wall()
-                        Box(Modifier.fillMaxWidth().height(116.dp).clip(RoundedCornerShape(16.dp)).background(wbg), contentAlignment = Alignment.Center) {
-                            Thumb(conf, 150f, 112f, sample = true) { Create.pick(t.type) }
+                        Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(16.dp)).background(wbg), contentAlignment = Alignment.Center) {
+                            Thumb(conf, 156f, 146f, sample = true) { Create.pick(t.type) }
                         }
                         Column(Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) {
                             Text(t.name, style = T.bodyB, color = p.ink)
@@ -273,6 +280,7 @@ private fun short(type: String) = when (type) {
 
 @Composable
 private fun ColumnScope.InfoStep(c: WConf) {
+    AppStore.rev
     val d = AppStore.data
     val ok = when (c.type) {
         "countdown" -> c.design == "stack" || d.dates.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
@@ -317,6 +325,7 @@ private fun num(s: String): Double? = s.replace(",", ".").trim().toDoubleOrNull(
 
 @Composable
 private fun CountdownInfo(c: WConf) {
+    AppStore.rev
     if (c.design == "stack") {
         Text("This design lists all your countdowns. Make a countdown first with another design.", style = T.body, color = pal().muted); return
     }
@@ -329,6 +338,7 @@ private fun CountdownInfo(c: WConf) {
 
 @Composable
 private fun StreakInfo(c: WConf) {
+    AppStore.rev
     val h = AppStore.data.habits.firstOrNull { it.id == c.ref } ?: return
     var name by remember(h.id) { mutableStateOf(h.name) }
     Field("Habit", name, { name = it; AppStore.change { h.name = it.take(30) } }, "Run")
@@ -338,6 +348,7 @@ private fun StreakInfo(c: WConf) {
 
 @Composable
 private fun CounterInfo(c: WConf) {
+    AppStore.rev
     val ct = AppStore.data.counters.firstOrNull { it.id == c.ref } ?: return
     var name by remember(ct.id) { mutableStateOf(ct.name) }
     var goal by remember(ct.id) { mutableStateOf(ct.goal.toString()) }
@@ -351,6 +362,7 @@ private fun CounterInfo(c: WConf) {
 
 @Composable
 private fun SpendInfo() {
+    AppStore.rev
     val d = AppStore.data
     var budget by remember { mutableStateOf(if (d.budget > 0) Fmt.trimNum(d.budget) else "") }
     Field("Monthly budget (${d.cur})", budget, { budget = it; AppStore.change { this.budget = maxOf(0.0, num(it) ?: 0.0) } }, "2000", KeyboardType.Decimal)
@@ -360,6 +372,7 @@ private fun SpendInfo() {
 
 @Composable
 private fun SubsInfo() {
+    AppStore.rev
     val p = pal()
     val d = AppStore.data
     if (d.subs.isNotEmpty()) ListCard {
@@ -395,6 +408,7 @@ private fun SubsInfo() {
 
 @Composable
 private fun ClockInfo() {
+    AppStore.rev
     val p = pal()
     val d = AppStore.data
     var q by remember { mutableStateOf("") }
@@ -424,6 +438,7 @@ private fun ClockInfo() {
 
 @Composable
 private fun ColumnScope.StyleStep(start: WConf) {
+    AppStore.rev
     var tab by remember { mutableStateOf("design") }
     val c = start
     val set: (WConf) -> Unit = { Create.conf = it }
@@ -456,6 +471,7 @@ private fun ColumnScope.StyleStep(start: WConf) {
 
 @Composable
 private fun DesignTab(c: WConf, set: (WConf) -> Unit) {
+    AppStore.rev
     val p = pal()
     val t = Catalog.type(c.type)
     val onPhone = Widgets.isOnPhone(c.id)
@@ -470,8 +486,8 @@ private fun DesignTab(c: WConf, set: (WConf) -> Unit) {
                     .clickable { set(c.copy(design = d.id, size = d.size)) }.padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     val (wbg, _) = wall()
-                    Box(Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(14.dp)).background(wbg), contentAlignment = Alignment.Center) {
-                        Thumb(th, 150f, 96f) { set(c.copy(design = d.id, size = d.size)) }
+                    Box(Modifier.fillMaxWidth().height(134.dp).clip(RoundedCornerShape(14.dp)).background(wbg), contentAlignment = Alignment.Center) {
+                        Thumb(th, 156f, 130f) { set(c.copy(design = d.id, size = d.size)) }
                     }
                     Text(d.name, style = T.smallB, color = p.ink)
                     Text("${Catalog.sizeName[d.size]} · ${Catalog.sizeGrid[d.size]}", style = T.small.copy(fontSize = 12.sp), color = p.muted)
@@ -485,6 +501,7 @@ private fun DesignTab(c: WConf, set: (WConf) -> Unit) {
 
 @Composable
 private fun ColourTab(c: WConf, set: (WConf) -> Unit) {
+    AppStore.rev
     val p = pal()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FieldLabel("Starting look")
@@ -499,6 +516,7 @@ private fun ColourTab(c: WConf, set: (WConf) -> Unit) {
 
 @Composable
 private fun TextTab(c: WConf, set: (WConf) -> Unit) {
+    AppStore.rev
     val p = pal()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FieldLabel("Typeface")
@@ -520,6 +538,7 @@ private fun TextTab(c: WConf, set: (WConf) -> Unit) {
 
 @Composable
 private fun ShapeTab(c: WConf, set: (WConf) -> Unit) {
+    AppStore.rev
     val rad = if (c.radius >= 0) c.radius else (com.phani.widgets.widget.CORNERS[c.corner] ?: 26f).toInt()
     SliderField("Corners", rad.toFloat(), 0f..40f, if (rad == 0) "Square" else "$rad") { set(c.copy(radius = it.toInt())) }
     ToggleRow("Outline", c.outline, "A thin line around the edge") { set(c.copy(outline = !c.outline)) }
@@ -533,6 +552,7 @@ private fun ShapeTab(c: WConf, set: (WConf) -> Unit) {
 
 @Composable
 private fun ColumnScope.AddStep(c: WConf) {
+    AppStore.rev
     val p = pal()
     val ctx = LocalContext.current
     // dropped on the home screen first: link it now
@@ -586,6 +606,7 @@ private fun ColumnScope.AddStep(c: WConf) {
 
 @Composable
 fun Guide(sizeName: String, grid: String, name: String) {
+    AppStore.rev
     val p = pal()
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         listOf(

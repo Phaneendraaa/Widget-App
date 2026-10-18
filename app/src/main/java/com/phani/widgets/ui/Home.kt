@@ -37,6 +37,7 @@ fun runHit(hit: Hit) {
 
 @Composable
 fun HomeScreen() {
+    AppStore.rev
     val p = pal()
     val d = AppStore.data
     Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -53,6 +54,7 @@ fun HomeScreen() {
 
 @Composable
 private fun EmptyHome() {
+    AppStore.rev
     val p = pal()
     Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         val (wbg, _) = wall()
@@ -71,6 +73,7 @@ private fun EmptyHome() {
 
 @Composable
 private fun WidgetCard(c: WConf) {
+    AppStore.rev
     val p = pal()
     val on = Widgets.isOnPhone(c.id)
     val (wbg, _) = wall()

@@ -50,6 +50,7 @@ fun wall() = WALLS[AppStore.data.wall] ?: WALLS.getValue("stone")
 
 @Composable
 fun SettingsScreen() {
+    AppStore.rev
     val p = pal()
     val d = AppStore.data
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
