@@ -77,6 +77,12 @@ class AppData(
     var weekStart: Int = 1,
     /** true: spend less today and the coming days get more (and the reverse). false: the same amount every day. */
     var bFlex: Boolean = true,
+    /** Reminders (local notifications). */
+    var remHabit: Boolean = false,
+    var remHabitAt: String = "21:00",
+    var remSubs: Boolean = false,
+    var remFast: Boolean = false,
+    var remWater: Boolean = false,
 )
 
 /* ---------------- JSON ---------------- */
@@ -132,6 +138,7 @@ fun AppData.toJson(): JSONObject {
     o.put("bound", b)
     o.put("howSeen", howSeen)
     o.put("bPeriod", bPeriod).put("bStart", bStart ?: JSONObject.NULL).put("bEnd", bEnd ?: JSONObject.NULL).put("weekStart", weekStart).put("bFlex", bFlex)
+        .put("remHabit", remHabit).put("remHabitAt", remHabitAt).put("remSubs", remSubs).put("remFast", remFast).put("remWater", remWater)
     o.put("notes", JSONArray(notes.map { JSONObject().put("id", it.id).put("text", it.text) }))
     return o
 }
@@ -176,6 +183,8 @@ fun appDataFrom(o: JSONObject): AppData {
         howSeen = o.optBoolean("howSeen", false),
         bPeriod = o.optString("bPeriod", "month"), bStart = o.optStr("bStart"), bEnd = o.optStr("bEnd"),
         weekStart = o.optInt("weekStart", 1), bFlex = o.optBoolean("bFlex", true),
+        remHabit = o.optBoolean("remHabit", false), remHabitAt = o.optString("remHabitAt", "21:00"), remSubs = o.optBoolean("remSubs", false),
+        remFast = o.optBoolean("remFast", false), remWater = o.optBoolean("remWater", false),
         notes = (o.optJSONArray("notes") ?: JSONArray()).objs().map { Note(it.getString("id"), it.getString("text")) }.toMutableList(),
     )
 }

@@ -79,6 +79,9 @@ fun SettingsScreen() {
         Feat(Ic.bolt, "Easy on battery", "Widgets change when you tap them, or when the day or your schedule changes.")
     }
 
+    SectionTitle("Reminders")
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { RemindersSection() }
+
     SectionTitle("Home screen widgets")
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val onPhone = remember(AppStore.rev) { com.phani.widgets.widget.Widgets.placedCount(ctx) }

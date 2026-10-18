@@ -53,6 +53,7 @@ internal fun FastInfo() {
     BigButton(if (f.start == null) "Start a fast" else "Change or end this fast", kind = "ghost") {
         ctx.startActivity(com.phani.widgets.QuickActivity.intent(ctx, "fast", null, null))
     }
+    RemindToggle("fast", "Tell me when it's done", "A notification when you reach your goal")
     FastHistory()
 }
 
@@ -299,4 +300,41 @@ internal fun FastHistory() {
             }
         }
     }
+}
+
+/* ---------------- reminders ---------------- */
+
+/**
+ * A reminder switch. Turning one on asks for notification permission first (Android 13+),
+ * and every change re-plans the reminders.
+ */
+@Composable
+internal fun RemindToggle(kind: String, title: String, sub: String) {
+    AppStore.rev
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val d = AppStore.data
+    val on = when (kind) { "habit" -> d.remHabit; "subs" -> d.remSubs; "fast" -> d.remFast; else -> d.remWater }
+    val set: (Boolean) -> Unit = { v ->
+        AppStore.change { when (kind) { "habit" -> remHabit = v; "subs" -> remSubs = v; "fast" -> remFast = v; else -> remWater = v } }
+        com.phani.widgets.widget.Reminders.schedule(ctx)
+    }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) set(true) else Toaster.show("Allow notifications in Settings to get reminders")
+    }
+    ToggleRow(title, on, sub) {
+        if (on) set(false)
+        else if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            ask.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        else set(true)
+    }
+    if (kind == "habit" && on) TimeField("Remind me at", d.remHabitAt) { v -> AppStore.change { remHabitAt = v }; com.phani.widgets.widget.Reminders.schedule(ctx) }
+}
+
+@Composable
+internal fun RemindersSection() {
+    RemindToggle("habit", "Streak at risk", "If you haven't checked in by the time you choose")
+    RemindToggle("subs", "Renewal tomorrow", "The day before a subscription charges, at 10 am")
+    RemindToggle("fast", "Fast finished", "When you reach your fasting goal")
+    RemindToggle("water", "Water nudges", "Every 2 hours, only if you're behind")
 }

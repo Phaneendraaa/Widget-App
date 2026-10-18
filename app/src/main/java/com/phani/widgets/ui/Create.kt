@@ -347,9 +347,9 @@ private fun InfoFields(c: WConf) {
         when (c.type) {
             "countdown" -> CountdownInfo(c)
             "streak" -> StreakInfo(c)
-            "counter" -> CounterInfo(c)
+            "counter" -> { CounterInfo(c); RemindToggle("water", "Nudge me if I'm behind", "Every 2 hours, 10 am to 8 pm") }
             "spend" -> SpendInfo(c)
-            "subs" -> SubsInfo()
+            "subs" -> { SubsInfo(); RemindToggle("subs", "Remind me the day before", "So you can cancel in time") }
             "clock" -> ClockInfo()
             "fast" -> FastInfo()
             "pace" -> PaceInfo(c)
@@ -393,6 +393,7 @@ private fun StreakInfo(c: WConf) {
     var name by remember(h.id) { mutableStateOf(h.name) }
     Field("Habit", name, { name = it; AppStore.change { h.name = it.take(30) } }, "Run")
     HabitCalendar(h)
+    RemindToggle("habit", "Remind me if I forget", "A nudge if you haven't checked in")
 }
 
 @Composable

@@ -71,6 +71,8 @@ abstract class BaseWidget : AppWidgetProvider() {
                     return
                 }
                 val r = Actions.run(act, intent.getStringExtra("id"), intent.getStringExtra("value"), intent.getStringExtra("cid"))
+                val n = intent.getIntExtra("notif", -1)
+                if (n != -1) context.getSystemService(android.app.NotificationManager::class.java).cancel(n)
                 Widgets.updateAll(context)
                 // take the Undo button away again once its time is up
                 if (r.undo && r.msg != null) Widgets.refreshSoon(context, AppStore.UNDO_MS + 500)
@@ -270,6 +272,7 @@ object Widgets {
      */
     fun scheduleTick(ctx: Context) {
         val app = ctx.applicationContext
+        Reminders.schedule(app)
         val am = app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         fun pi(code: Int, action: String) = PendingIntent.getBroadcast(app, code, Intent(app, CountdownWidget::class.java).setAction(action),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
