@@ -62,8 +62,9 @@ fun HomeScreen() {
     val p = pal()
     val d = AppStore.data
     val edit = HomeState.edit
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     ClockTicker()
-    TopBar("Home", if (edit) "Tap a widget to restyle it." else "Live widgets. Tap the buttons on them.") {
+    TopBar("Home", if (edit) "Tap + to put a widget on your real home screen." else "Live widgets. Tap the buttons on them.") {
         ChipButton(if (edit) "Done" else "Edit", solid = edit, icon = if (edit) null else Ic.brush) { HomeState.edit = !edit }
     }
     val (wbg, wfg) = wall()
@@ -93,6 +94,9 @@ fun HomeScreen() {
                         Box(if (full) Modifier.fillMaxWidth() else Modifier.weight(1f)) {
                             WidgetView(conf, live = !edit, onTap = { if (edit) Toaster.show("Restyling arrives with the customise build") }) { runHit(it) }
                             if (edit) Row(Modifier.align(Alignment.TopEnd).padding(top = 0.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                EditDot(Ic.plus) {
+                                    if (!com.phani.widgets.widget.Widgets.requestPin(ctx, conf)) Toaster.show("Long-press your home screen, tap Widgets, then pick Widget App")
+                                }
                                 if (i > 0) EditDot(Ic.up) { AppStore.change { val x = placed.removeAt(i); placed.add(i - 1, x) } }
                                 EditDot(Ic.x) { AppStore.change(true) { placed.removeAt(i) }; Toaster.show("Widget removed", true) }
                             }

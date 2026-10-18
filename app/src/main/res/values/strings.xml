@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Widget App</string>
-    <string name="widget_name">Countdown</string>
-    <string name="widget_desc">Your own countdown, in your style</string>
+    <string name="widget_name_s">Widget App · Small</string>
+    <string name="widget_name_w">Widget App · Wide</string>
+    <string name="widget_name_m">Widget App · Large</string>
+    <string name="widget_desc_s">2×2 · spend, fasting, streak, countdown and more</string>
+    <string name="widget_desc_w">4×1 · strips, timers, clocks and next up</string>
+    <string name="widget_desc_m">4×2 · Right now, heatmaps, lists and progress</string>
 </resources>

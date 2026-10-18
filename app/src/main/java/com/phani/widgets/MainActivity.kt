@@ -17,6 +17,9 @@ class MainActivity : ComponentActivity() {
         AppStore.load(this)
         Fonts.init(assets)
         com.phani.widgets.widget.WFonts.init(assets)
+        com.phani.widgets.widget.Widgets.prepare(this)
+        com.phani.widgets.widget.Widgets.scheduleTick(this)
+        if (intent?.getStringExtra("open") == "spend-open") com.phani.widgets.ui.Nav.tab = "track"
         setContent {
             AppStore.rev
             val mode = AppStore.data.theme
