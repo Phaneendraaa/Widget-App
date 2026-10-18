@@ -33,13 +33,20 @@ jobs:
             exit 1
           }
 
+      - name: Render widget contact sheet
+        continue-on-error: true
+        run: |
+          gradle testDebugUnitTest --tests "com.phani.widgets.RenderSheetTest" --no-daemon 2>&1 | tail -20
+          ls -la app/build/sheet.png || true
+
       - name: Publish latest release (replaces older builds)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk widget-app.apk
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest widget-app.apk \
+          EXTRA=""; [ -f app/build/sheet.png ] && cp app/build/sheet.png sheet.png && EXTRA="sheet.png"
+          gh release create latest widget-app.apk $EXTRA \
             --title "Latest build" \
             --notes "Build from commit ${GITHUB_SHA::7}" \
             --latest
