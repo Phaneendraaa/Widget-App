@@ -38,6 +38,11 @@ jobs:
         run: |
           gradle testDebugUnitTest --tests "com.phani.widgets.RenderSheetTest" --tests "com.phani.widgets.ScreensTest" --no-daemon 2>&1 | grep -E "FAIL|Exception|Error|at com.phani|BUILD|tests completed" | head -40
           ls -la app/build/sheet.png app/build/screens.png || true
+          for f in app/build/test-results/testDebugUnitTest/*.xml; do
+            if grep -q '<failure' "$f"; then
+              echo "::error::T: $(basename $f) $(sed -n '/<failure/,/<\/failure>/p' "$f" | grep -E 'failure message|Exception|Error|at com\.phani|Caused by' | head -14 | tr '\n' ' ' | cut -c1-3000)"
+            fi
+          done
 
       - name: Publish latest release (replaces older builds)
         env:
