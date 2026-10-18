@@ -104,7 +104,7 @@ fun diagnostics(ctx: Context): String {
     val sb = StringBuilder()
     sb.append("Phone: ${Build.MANUFACTURER} ${Build.MODEL}\n")
     sb.append("Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
-    sb.append("App version: 0.3.0\n\n")
+    sb.append("App version: 0.3.1\n\n")
     try {
         val mgr = AppWidgetManager.getInstance(ctx)
         sb.append("Launcher can add widgets from apps: ${mgr.isRequestPinAppWidgetSupported}\n")
@@ -232,7 +232,7 @@ fun HomeScreen() {
                     "Your launcher didn’t accept the request.\n\n" +
                         "1. Long-press an empty spot on your home screen\n" +
                         "2. Tap Widgets\n" +
-                        "3. Find Countdown Widgets and drag it out\n" +
+                        "3. Find Widget App and drag it out\n" +
                         "4. Pick your countdown\n\n" +
                         "Tap “Can’t add?” at the top to see what your phone reports."
                 )
