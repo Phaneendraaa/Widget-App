@@ -43,6 +43,8 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            // each test class gets a fresh process, so one test's data can't leak into the next
+            all { it.forkEvery = 1 }
         }
     }
 
