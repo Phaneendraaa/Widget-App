@@ -176,8 +176,9 @@ object Designs {
                 small("today", W - pad, nb - 1f, align = R)
                 dashed(pad, nb + 12f, W - pad, p.soft)
                 var y = nb + 30f
-                val rows = s.todays.takeLast(3).reversed()
-                if (rows.isEmpty()) { small("Nothing spent yet today", pad, y); }
+                val fit = ((H - pad - 40f - 10f - y) / 19f).toInt() + 1
+                val rows = s.todays.takeLast(3).reversed().take(max(0, fit))
+                if (rows.isEmpty() && fit > 0) { small("Nothing spent yet today", pad, y); }
                 rows.forEach { r ->
                     text(r.note.ifBlank { "Spend" }, pad, y, 13f, uiFace(400), p.fg, maxW = W - 2 * pad - 70f)
                     text(Fmt.money(r.amt), W - pad, y, 13f, uiFace(500), p.fg, align = R); y += 19f
@@ -439,7 +440,7 @@ object Designs {
                 val base = H - pad - 24f
                 bigWithUnit(Fmt.num(r.per), g.unit, base, sz, topLimit = pad + 44f)
                 val w = small(stTxt, pad, H - pad - 2f, stCol, weight = 600)
-                small(" · ${r.left}d left", pad + w, H - pad - 2f, p.fg)
+                small(" · ${r.left}d", pad + w, H - pad - 2f, p.fg, maxW = W - 2 * pad - w)
             }
             else -> {
                 top(g.name)
@@ -464,11 +465,12 @@ object Designs {
             if (rows.isEmpty()) { empty("Coming up", "Add a date in Track"); return@with }
             top("Coming up")
             var y = pad + 26f
+            var nx = pad + 56f
             rows.forEachIndexed { i, (d, n) ->
                 val sz = if (i == 0) 42f else 26f
                 val base = y + cap(sz)
-                num(n.days.toString(), pad, base, sz, if (i == 0) p.acc else p.fg)
-                val nx = pad + if (i == 0) 74f else 52f
+                val nw = num(n.days.toString(), pad, base, sz, if (i == 0) p.acc else p.fg)
+                if (i == 0) nx = pad + max(56f, nw + 14f)
                 t2(d.name, nx, base - (if (i == 0) 16f else 10f), if (i == 0) 16f else 14f, maxW = W - nx - pad)
                 small((if (n.days == 1) "day" else "days") + " · " + Fmt.full(n.d), nx, base + 2f, maxW = W - nx - pad)
                 y = base + 16f
@@ -696,8 +698,9 @@ object Designs {
                 if (subjectBy(cls?.sub) == null) cls = null
                 val r = att(s)
                 top(if (cls != null) Fmt.hm(cls.s) else "Last class")
-                val hh = para(s.name, pad, pad + 24f, W - 2 * pad, 17f, t2Face(), p.fg, -0.01f, 1.1f, 2)
-                small("${s.a}/${s.t} · ${(r.p * 100).roundToInt()}%", pad, pad + 24f + hh + 16f)
+                val room = H - pad - 40f - 8f - (pad + 24f) - 16f
+                val hh = para(s.name, pad, pad + 24f, W - 2 * pad, 17f, t2Face(), p.fg, -0.01f, 1.1f, if (room >= 42f) 2 else 1)
+                small("${s.a}/${s.t} · ${(r.p * 100).roundToInt()}%", pad, min(pad + 24f + hh + 16f, H - pad - 48f))
                 val bw = (W - 2 * pad - 8f) / 2
                 button(pad, H - pad - 40f, bw, 40f, "solid", "att-p", s.id, ic = Paths.check)
                 button(pad + bw + 8f, H - pad - 40f, bw, 40f, "ghost", "att-a", s.id, ic = Paths.x)
