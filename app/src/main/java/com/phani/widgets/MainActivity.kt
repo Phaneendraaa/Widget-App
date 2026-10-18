@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
@@ -79,17 +80,15 @@ class MainActivity : ComponentActivity() {
 
 private val ScreenBg = Color(0xFFECECF1)
 
-fun requestPin(ctx: Context, c: Countdown) {
+/** Returns false when the launcher can't or won't take the request. */
+fun requestPin(ctx: Context, c: Countdown): Boolean {
     Store.setPending(ctx, c.id)
-    val mgr = AppWidgetManager.getInstance(ctx)
-    if (mgr.isRequestPinAppWidgetSupported) {
-        mgr.requestPinAppWidget(ComponentName(ctx, CountdownWidget::class.java), null, null)
-    } else {
-        Toast.makeText(
-            ctx,
-            "Long-press your home screen → Widgets → Countdown, then pick it",
-            Toast.LENGTH_LONG
-        ).show()
+    return try {
+        val mgr = AppWidgetManager.getInstance(ctx)
+        mgr.isRequestPinAppWidgetSupported &&
+            mgr.requestPinAppWidget(ComponentName(ctx, CountdownWidget::class.java), null, null)
+    } catch (e: Exception) {
+        false
     }
 }
 
@@ -99,6 +98,7 @@ fun HomeScreen() {
     var items by remember { mutableStateOf(Store.all(ctx)) }
     var showEditor by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Countdown?>(null) }
+    var showHelp by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = ScreenBg,
@@ -124,7 +124,10 @@ fun HomeScreen() {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
             )
-            Text("Create one, pick a style, add it to your home screen.", color = Color(0xFF6B6B76))
+            Text(
+                "No popup after tapping Add? Long-press your home screen → Widgets → Countdown Widgets, drag it out, then pick your countdown.",
+                color = Color(0xFF6B6B76),
+            )
             Spacer(Modifier.height(16.dp))
 
             if (items.isEmpty()) {
@@ -143,7 +146,7 @@ fun HomeScreen() {
                         val st = Styles.get(c.style)
                         CountdownCard(c) {
                             Button(
-                                onClick = { requestPin(ctx, c) },
+                                onClick = { if (!requestPin(ctx, c)) showHelp = true },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(st.accent),
                                     contentColor = Color(st.bg),
@@ -165,6 +168,24 @@ fun HomeScreen() {
                 }
             }
         }
+    }
+
+    if (showHelp) {
+        AlertDialog(
+            onDismissRequest = { showHelp = false },
+            confirmButton = { TextButton(onClick = { showHelp = false }) { Text("Got it") } },
+            title = { Text("Add it manually") },
+            text = {
+                Text(
+                    "Your launcher didn't accept the request.\n\n" +
+                        "1. Long-press an empty spot on your home screen\n" +
+                        "2. Tap Widgets\n" +
+                        "3. Find Countdown Widgets and drag it out\n" +
+                        "4. Pick your countdown\n\n" +
+                        "Tip: in Settings → Apps → Countdown Widgets → Permissions, allow “Home screen shortcuts” if you see it, then try the button again."
+                )
+            },
+        )
     }
 
     if (showEditor) {
