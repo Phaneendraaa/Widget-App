@@ -196,7 +196,7 @@ private fun CustomizeSheet(start: WConf) {
             Seg(Catalog.corners, cu.corner) { cu = cu.copy(corner = it) }
         }
 
-        Row(Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp)).background(p.card).clickable { cu = cu.copy(label = !cu.label }.padding(start = 16.dp, end = 8.dp),
+        Row(Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp)).background(p.card).clickable { cu = cu.copy(label = !cu.label) }.padding(start = 16.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Text("Show label", style = T.bodyB, color = p.ink, modifier = Modifier.weight(1f))
             Toggle(cu.label)
