@@ -403,6 +403,7 @@ fun TrackSheetHost() {
         "whatif" -> WhatIfSheet(close)
         "sched" -> SchedSheet(close)
         "clear" -> ClearSheet(close)
+        "help" -> HelpSheet(close)
     }
 }
 

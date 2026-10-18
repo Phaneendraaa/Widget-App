@@ -66,6 +66,7 @@ fun AppShell() {
             PillNav()
         }
         SheetHost()
+        if (!AppStore.data.onboarded) Onboarding()
     }
 }
 

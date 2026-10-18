@@ -236,6 +236,15 @@ fun SettingsScreen() {
         Feat(Ic.bolt, "Easy on battery", "Widgets change when you tap them, or when the day or your schedule changes.")
     }
 
+    SectionTitle("Home screen widgets")
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val onPhone = remember(AppStore.rev) { com.phani.widgets.widget.Widgets.placedCount(ctx) }
+    ListCard {
+        ListRow("On your home screen", if (onPhone == 0) "None yet" else "${onPhone} widget" + (if (onPhone == 1) "" else "s") + ", updated as you tap",
+            trailing = { Text("$onPhone", style = T.bodyB, color = p.ink) })
+        ListRow("How to add and keep them updated", divider = false, trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) { TrackState.open("help") }
+    }
+
     SectionTitle("Data")
     var confirm by remember { mutableStateOf(false) }
     ListCard {
@@ -245,6 +254,7 @@ fun SettingsScreen() {
             AppStore.replace(s)
             Toaster.show("Example data loaded")
         }
+        ListRow("Show welcome again", trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) { AppStore.change { onboarded = false } }
         ListRow(if (confirm) "Tap again to delete everything" else "Delete all my data", titleColor = p.warn, divider = false,
             trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) {
             if (!confirm) { confirm = true; return@ListRow }
@@ -257,7 +267,7 @@ fun SettingsScreen() {
             Toaster.show("All data deleted", canUndo = true)
         }
     }
-    Text("Widget App · 0.4", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 22.dp))
+    Text("Widget App · 0.9", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 22.dp))
 }
 
 @Composable
