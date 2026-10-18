@@ -124,7 +124,7 @@ fun Onboarding() {
                 }
                 Spacer(Modifier.height(16.dp))
                 Headline("Make every one ", "yours.")
-                Sub("${Catalog.totalDesigns} designs, six looks, three typefaces. Right now picks the one thing that needs you.")
+                Sub("${Catalog.totalDesigns} designs. Any colour, any corner, your own title. Everything included, no in-app purchases.")
             }
         }
         Spacer(Modifier.height(24.dp))

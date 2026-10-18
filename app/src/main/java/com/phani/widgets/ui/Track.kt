@@ -309,7 +309,7 @@ private fun ClassesTab() {
         ListRow("Add class", divider = false, trailing = { PlusIcon() }) { TrackState.open("subject") }
     }
     BigButton("What if I miss some?", Modifier.padding(top = 12.dp), kind = "ghost") {
-        if (!d.pro) Sheets.showPaywall("What-if is part of Pro") else TrackState.open("whatif")
+        TrackState.open("whatif")
     }
     SectionTitle("Required attendance")
     Seg(listOf(60, 70, 75, 80, 90).map { it to "$it%" }, d.req) { v -> AppStore.change { req = v }; Toaster.show("Required attendance set to $v%") }

@@ -31,6 +31,13 @@ data class WConf(
     val corner: String = "round",
     val label: Boolean = true,
     val ref: String? = null,
+    /** Full customisation. Null / -1 means "follow the look". Colours are #RRGGBB. */
+    val bg: String? = null,
+    val fg: String? = null,
+    val alpha: Int = 100,
+    val radius: Int = -1,
+    val outline: Boolean = false,
+    val title: String? = null,
 )
 
 class AppData(
@@ -69,11 +76,14 @@ private fun JSONObject.optStr(k: String): String? = if (has(k) && !isNull(k)) ge
 fun WConf.toJson(): JSONObject = JSONObject()
     .put("id", id).put("type", type).put("design", design).put("size", size).put("style", style)
     .put("accent", accent).put("font", font).put("corner", corner).put("label", label).put("ref", ref ?: JSONObject.NULL)
+    .put("bg", bg ?: JSONObject.NULL).put("fg", fg ?: JSONObject.NULL).put("alpha", alpha).put("radius", radius)
+    .put("outline", outline).put("title", title ?: JSONObject.NULL)
 
 fun wconf(o: JSONObject) = WConf(
     o.getString("id"), o.getString("type"), o.getString("design"), o.getString("size"),
     o.optString("style", "paper"), o.optString("accent", "signal"), o.optString("font", "grotesk"),
     o.optString("corner", "round"), o.optBoolean("label", true), o.optStr("ref"),
+    o.optStr("bg"), o.optStr("fg"), o.optInt("alpha", 100), o.optInt("radius", -1), o.optBoolean("outline", false), o.optStr("title"),
 )
 
 fun AppData.toJson(): JSONObject {

@@ -60,13 +60,11 @@ import com.phani.widgets.widget.preferredHeight
 object Sheets {
     var custom by mutableStateOf<WConf?>(null)
     var customIndex by mutableStateOf(-1)
-    var paywall by mutableStateOf<String?>(null)
     var help by mutableStateOf(false)
     var open by mutableStateOf(false)
 
     fun customNew(type: String) { custom = Catalog.newConf(type); customIndex = -1 }
     fun customEdit(i: Int) { custom = AppStore.data.placed[i]; customIndex = i }
-    fun showPaywall(reason: String = "") { custom = null; paywall = reason }
 }
 
 @Composable
@@ -96,8 +94,6 @@ fun Sheet(title: String, onDismiss: () -> Unit, content: @Composable ColumnScope
 fun SheetHost() {
     val c = Sheets.custom
     if (c != null) CustomizeSheet(c)
-    val pw = Sheets.paywall
-    if (pw != null) PaywallSheet(pw)
     TrackSheetHost()
     val a = Flow.actions
     if (a != null) WidgetActionsSheet(a)
@@ -114,7 +110,6 @@ private fun CustomizeSheet(start: WConf) {
     val t = Catalog.type(start.type)
     val editing = Sheets.customIndex >= 0
     var cu by remember(start.id, Sheets.customIndex) { mutableStateOf(start) }
-    val locked = Catalog.isPro(cu) && !AppStore.data.pro
     val close = { Sheets.custom = null }
     Sheet(if (editing) "Customise ${t.name}" else t.name, close) {
         val (wbg, _) = wall()
@@ -149,7 +144,6 @@ private fun CustomizeSheet(start: WConf) {
                             })
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if ((d.pro || t.pro) && !AppStore.data.pro) { Icon(Ic.lock, null, tint = p.ink, modifier = Modifier.size(11.dp)); Spacer(Modifier.width(4.dp)) }
                             Text(d.name, style = T.smallB.copy(fontSize = 12.sp), color = p.ink, maxLines = 1)
                         }
                     }
@@ -162,51 +156,47 @@ private fun CustomizeSheet(start: WConf) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Catalog.styles.chunked(3).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        row.forEach { (k, l, pro) ->
-                            val on = cu.style == k
-                            Row(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.ink else Color.Transparent).clickable { cu = cu.copy(style = k) },
+                        row.forEach { (k, l, _) ->
+                            val on = cu.style == k && cu.bg == null
+                            Row(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.ink else Color.Transparent)
+                                .clickable { cu = cu.copy(style = k, bg = null, fg = null, alpha = 100) },
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                                if (pro && !AppStore.data.pro) { Icon(Ic.lock, null, tint = if (on) p.paper else p.muted, modifier = Modifier.size(12.dp)); Spacer(Modifier.width(4.dp)) }
                                 Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted)
                             }
                         }
                     }
                 }
             }
+            Text("A starting point. Fine-tune every colour below.", style = T.small, color = p.muted)
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FieldLabel("Accent")
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ACCENTS.forEach { (k, v) -> Swatch(Color(v), cu.accent == k, 40.dp) { cu = cu.copy(accent = k) } }
-            }
-        }
+        ColorField("Accent colour", cu.accent.let { ACCENTS[it]?.let { v -> hex(v) } ?: it }, ACCENT_PALETTE, auto = null) { cu = cu.copy(accent = it ?: "signal") }
+        ColorField("Background", cu.bg, BG_PALETTE, auto = "From look") { cu = cu.copy(bg = it) }
+        ColorField("Text colour", cu.fg, TEXT_PALETTE, auto = "Auto") { cu = cu.copy(fg = it) }
+
+        SliderField("Background opacity", cu.alpha.toFloat(), 0f..100f, "${cu.alpha}%") { cu = cu.copy(alpha = it.toInt()) }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             FieldLabel("Typeface")
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Catalog.fonts.forEach { (k, l, pro) ->
+                Catalog.fonts.forEach { (k, l, _) ->
                     val on = cu.font == k
                     val fam = when (k) { "serif" -> Fonts.serif; "mono" -> Fonts.mono; else -> Fonts.ui }
                     Row(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.ink else Color.Transparent).clickable { cu = cu.copy(font = k) },
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                        if (pro && !AppStore.data.pro) { Icon(Ic.lock, null, tint = if (on) p.paper else p.muted, modifier = Modifier.size(12.dp)); Spacer(Modifier.width(4.dp)) }
                         Text(l, style = T.smallB.copy(fontFamily = fam, fontSize = if (k == "serif") 17.sp else 14.sp, fontWeight = if (k == "serif") FontWeight.Normal else FontWeight.SemiBold), color = if (on) p.paper else p.muted)
                     }
                 }
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FieldLabel("Corners")
-            Seg(Catalog.corners, cu.corner) { cu = cu.copy(corner = it) }
-        }
+        val rad = if (cu.radius >= 0) cu.radius else (com.phani.widgets.widget.CORNERS[cu.corner] ?: 26f).toInt()
+        SliderField("Corner roundness", rad.toFloat(), 0f..40f, if (rad == 0) "Square" else "$rad") { cu = cu.copy(radius = it.toInt()) }
 
-        Row(Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp)).background(p.card).clickable { cu = cu.copy(label = !cu.label) }.padding(start = 16.dp, end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Text("Show label", style = T.bodyB, color = p.ink, modifier = Modifier.weight(1f))
-            Toggle(cu.label)
-        }
+        Field("Title", cu.title ?: "", { cu = cu.copy(title = it.take(32).ifEmpty { null }) }, placeholder = "Default title")
+
+        ToggleRow("Show title", cu.label) { cu = cu.copy(label = !cu.label) }
+        ToggleRow("Outline", cu.outline) { cu = cu.copy(outline = !cu.outline) }
 
         val refs = Catalog.refOptions(cu)
         if (refs != null && refs.isNotEmpty()) {
@@ -226,27 +216,25 @@ private fun CustomizeSheet(start: WConf) {
             }
         }
 
-        val d = AppStore.data
-        BigButton(if (locked) "Unlock Pro to use this" else if (editing) "Save changes" else "Add widget", icon = if (locked) Ic.lock else null) {
-            when {
-                locked -> Sheets.showPaywall("This look is part of Pro")
-                editing -> {
-                    val i = Sheets.customIndex
-                    AppStore.change { if (i in placed.indices) placed[i] = cu }
-                    close(); Toaster.show("${t.name} updated")
-                }
-                !d.pro && d.placed.size >= Catalog.FREE_LIMIT -> Sheets.showPaywall("Free includes ${Catalog.FREE_LIMIT} widgets")
-                else -> {
-                    val conf = cu.copy(id = com.phani.widgets.core.uid())
-                    AppStore.change { placed.add(conf) }
-                    close(); Nav.tab = "home"
-                    val pinned = Widgets.requestPin(ctx, conf)
-                    if (pinned) Toaster.show("${t.name} added. Confirm on the next screen to put it on your phone.") else { Toaster.show("${t.name} added to My widgets"); Sheets.help = true }
-                }
+        Text("Reset look to default", style = T.bodyB, color = p.ink, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable {
+                cu = cu.copy(style = "paper", accent = "signal", font = "grotesk", corner = "round", label = true, bg = null, fg = null, alpha = 100, radius = -1, outline = false, title = null)
+            }.padding(12.dp))
+
+        BigButton(if (editing) "Save changes" else "Add widget") {
+            if (editing) {
+                val i = Sheets.customIndex
+                AppStore.change { if (i in placed.indices) placed[i] = cu }
+                close(); Toaster.show("${t.name} updated")
+            } else {
+                val conf = cu.copy(id = com.phani.widgets.core.uid())
+                AppStore.change { placed.add(conf) }
+                close(); Nav.tab = "home"
+                val pinned = Widgets.requestPin(ctx, conf)
+                if (pinned) Toaster.show("${t.name} added. Confirm on the next screen to put it on your phone.") else { Toaster.show("${t.name} added to My widgets"); Sheets.help = true }
             }
         }
-        if (locked) Text("Everything with a lock is part of Pro. Try it here as much as you like.", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        else if (editing) BigButton("Remove", kind = "danger") {
+        if (editing) BigButton("Remove", kind = "danger") {
             val i = Sheets.customIndex
             AppStore.change(true) { if (i in placed.indices) placed.removeAt(i) }
             close(); Toaster.show("Widget removed", true)
@@ -255,43 +243,109 @@ private fun CustomizeSheet(start: WConf) {
     }
 }
 
+private fun hex(c: Int) = String.format("#%06X", c and 0xFFFFFF)
+
+private val ACCENT_PALETTE = listOf(
+    "#FF5A1F", "#E5484D", "#F2557A", "#D6409F", "#8E6CFF", "#6E56CF", "#3B5BFF", "#0091FF",
+    "#0EA5A4", "#12A26B", "#30A46C", "#9BBF2A", "#F0B400", "#FF8A00", "#8D6E63", "#868E96", "#121211", "#FFFFFF",
+)
+private val BG_PALETTE = listOf(
+    "#FFFFFF", "#F6F4EE", "#EEECE6", "#E8E1D3", "#D9D4C7", "#FFE8D6", "#FDE2E4", "#EAE4F7", "#DDE7F7", "#E2ECE9", "#FFF3BF",
+    "#121211", "#1F2328", "#2B2D42", "#1E3A5F", "#0B3D2E", "#3A1F4F", "#5C1A1A", "#FF5A1F", "#3B5BFF", "#12A26B",
+)
+private val TEXT_PALETTE = listOf("#121211", "#3D3A35", "#5D5952", "#FFFFFF", "#F3F1EB", "#FF5A1F", "#3B5BFF", "#12A26B", "#F0B400", "#8E6CFF")
+
+/** A row of colour swatches, an optional Auto chip, and a Custom picker with hue, saturation and brightness. */
+@Composable
+private fun ColorField(label: String, value: String?, palette: List<String>, auto: String?, onChange: (String?) -> Unit) {
+    val p = pal()
+    var custom by remember { mutableStateOf(false) }
+    val cur = value?.uppercase()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FieldLabel(label)
+            Spacer(Modifier.weight(1f))
+            Text(cur ?: (auto ?: ""), style = T.small, color = p.muted)
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (auto != null) {
+                val on = cur == null
+                Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(if (on) p.ink else p.card)
+                    .then(if (on) Modifier else Modifier.border(1.dp, p.line, RoundedCornerShape(20.dp)))
+                    .clickable { onChange(null); custom = false }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                    Text(auto, style = T.smallB, color = if (on) p.paper else p.ink)
+                }
+            }
+            palette.forEach { h ->
+                val c = Color(android.graphics.Color.parseColor(h))
+                Box(Modifier.border(1.dp, p.line, RoundedCornerShape(20.dp))) { Swatch(c, cur == h, 40.dp) { onChange(h); custom = false } }
+            }
+            val inPalette = cur != null && cur in palette
+            Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(if (custom || (cur != null && !inPalette)) p.ink else p.card)
+                .then(if (custom) Modifier else Modifier.border(1.dp, p.line, RoundedCornerShape(20.dp)))
+                .clickable { custom = !custom }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                Text("Custom", style = T.smallB, color = if (custom || (cur != null && !inPalette)) p.paper else p.ink)
+            }
+        }
+        if (custom) {
+            val base = com.phani.widgets.widget.hexColor(cur) ?: 0xFFFF5A1F.toInt()
+            val hsv = remember(label) { FloatArray(3).also { android.graphics.Color.colorToHSV(base, it) } }
+            var h by remember(label) { mutableStateOf(hsv[0]) }
+            var sat by remember(label) { mutableStateOf(hsv[1]) }
+            var v by remember(label) { mutableStateOf(hsv[2]) }
+            val emit = { onChange(hex(android.graphics.Color.HSVToColor(floatArrayOf(h, sat, v)))) }
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(Color(android.graphics.Color.HSVToColor(floatArrayOf(h, sat, v)))).border(1.dp, p.line, RoundedCornerShape(18.dp)))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Drag to mix your own colour", style = T.small, color = p.muted)
+                }
+                MiniSlider("Hue", h, 0f..360f) { h = it; emit() }
+                MiniSlider("Saturation", sat, 0f..1f) { sat = it; emit() }
+                MiniSlider("Brightness", v, 0f..1f) { v = it; emit() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+    val p = pal()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = T.small, color = p.muted, modifier = Modifier.width(84.dp))
+        androidx.compose.material3.Slider(value = value, onValueChange = onChange, valueRange = range, modifier = Modifier.weight(1f),
+            colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = p.ink, activeTrackColor = p.ink, inactiveTrackColor = p.soft))
+    }
+}
+
+@Composable
+private fun SliderField(label: String, value: Float, range: ClosedFloatingPointRange<Float>, shown: String, onChange: (Float) -> Unit) {
+    val p = pal()
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FieldLabel(label)
+            Spacer(Modifier.weight(1f))
+            Text(shown, style = T.smallB, color = p.ink)
+        }
+        androidx.compose.material3.Slider(value = value, onValueChange = onChange, valueRange = range,
+            colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = p.ink, activeTrackColor = p.ink, inactiveTrackColor = p.soft))
+    }
+}
+
+@Composable
+private fun ToggleRow(label: String, on: Boolean, onClick: () -> Unit) {
+    val p = pal()
+    Row(Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp)).background(p.card).clickable(onClick = onClick).padding(start = 16.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = T.bodyB, color = p.ink, modifier = Modifier.weight(1f))
+        Toggle(on)
+    }
+}
+
 @Composable
 fun Toggle(on: Boolean) {
     val p = pal()
     Box(Modifier.size(52.dp, 32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) p.ink else p.soft).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
         Box(Modifier.size(26.dp).clip(RoundedCornerShape(13.dp)).background(Color.White))
-    }
-}
-
-@Composable
-private fun PaywallSheet(reason: String) {
-    val p = pal()
-    val d = AppStore.data
-    Sheet("Widget App Pro", { Sheets.paywall = null }) {
-        if (reason.isNotBlank()) Pill(reason)
-        Text(
-            androidx.compose.ui.text.buildAnnotatedString {
-                append("Pay once. ")
-                pushStyle(androidx.compose.ui.text.SpanStyle(fontFamily = Fonts.serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Normal))
-                append("Keep it forever.")
-                pop()
-            },
-            style = T.h1.copy(fontSize = 30.sp, lineHeight = 32.sp), color = p.ink,
-        )
-        ListCard {
-            Feat(Ic.palette, "Every design and style", "Frost, Smoke, Tint and Clear looks. Serif and Mono type.")
-            Feat(Ic.grid, "Unlimited widgets", "Free includes ${Catalog.FREE_LIMIT} on your home screen.")
-            Feat(Ic.bolt, "Right now, Pace and Progress", "The widgets that think for you.")
-            Feat(Ic.shield, "Still private", "No account, no ads, no tracking. Ever.")
-        }
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.ink).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("LIFETIME", style = T.label.copy(fontSize = 11.sp), color = p.paper.copy(alpha = 0.7f))
-                Text(CUR[d.cur]?.pro ?: "$9.99", style = T.h1.copy(fontSize = 36.sp), color = p.paper)
-            }
-            Text("One payment\nNo subscription", style = T.small, color = p.paper.copy(alpha = 0.75f), textAlign = TextAlign.End)
-        }
-        BigButton("Unlock Pro") { AppStore.change { pro = true }; Sheets.paywall = null; Toaster.show("Pro unlocked") }
-        Text("Test build: this unlocks Pro without payment. Prices are placeholders.", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }
 }

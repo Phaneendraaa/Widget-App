@@ -35,15 +35,10 @@ object Catalog {
     val styles = listOf(Triple("paper", "Paper", false), Triple("ink", "Ink", false), Triple("tint", "Tint", true), Triple("frost", "Frost", true), Triple("smoke", "Smoke", true), Triple("clear", "Clear", true))
     val fonts = listOf(Triple("grotesk", "Grotesk", false), Triple("serif", "Serif", true), Triple("mono", "Mono", true))
     val corners = listOf("round" to "Round", "soft" to "Soft", "sharp" to "Sharp")
-    const val FREE_LIMIT = 3
 
     fun type(t: String) = types.first { it.type == t }
     fun design(t: String, d: String) = type(t).designs.firstOrNull { it.id == d } ?: type(t).designs[0]
     val totalDesigns get() = types.sumOf { it.designs.size }
-
-    /** True when any part of this look needs Pro. */
-    fun isPro(c: WConf): Boolean = type(c.type).pro || design(c.type, c.design).pro ||
-        styles.firstOrNull { it.first == c.style }?.third == true || fonts.firstOrNull { it.first == c.font }?.third == true
 
     fun defaultRef(t: String): String? {
         val d = AppStore.data

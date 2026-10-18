@@ -50,9 +50,33 @@ val ACCENTS = linkedMapOf(
 
 private fun argb(a: Float, rgb: Int): Int = ((a * 255).toInt().coerceIn(0, 255) shl 24) or (rgb and 0xFFFFFF)
 
+fun hexColor(s: String?): Int? = s?.let { runCatching { android.graphics.Color.parseColor(it) }.getOrNull() }
+fun accentColor(a: String): Int = ACCENTS[a] ?: hexColor(a) ?: C_SIGNAL
+fun luma(c: Int): Float = (0.299f * ((c shr 16) and 255) + 0.587f * ((c shr 8) and 255) + 0.114f * (c and 255)) / 255f
+
 fun widgetPal(conf: WConf, wallFg: Int, wallBg: Int): WPal {
-    val acc = ACCENTS[conf.accent] ?: C_SIGNAL
-    val lightAcc = conf.accent == "sun" || conf.accent == "mint"
+    val base = basePal(conf, wallFg, wallBg)
+    var bg = base.bg; var fg = base.fg; var mut = base.mut; var soft = base.soft; var btnText = base.btnText
+    val cbg = hexColor(conf.bg)
+    if (cbg != null) {
+        bg = cbg or 0xFF000000.toInt()
+        fg = if (luma(bg) > 0.6f) 0xFF121211.toInt() else 0xFFF6F4EE.toInt()
+        mut = argb(0.68f, fg); soft = argb(0.14f, fg); btnText = bg
+    }
+    val cfg = hexColor(conf.fg)
+    if (cfg != null) { fg = cfg or 0xFF000000.toInt(); mut = argb(0.68f, fg); soft = argb(0.15f, fg) }
+    if (conf.alpha < 100) {
+        val a = ((bg ushr 24) and 255) / 255f * conf.alpha.coerceIn(0, 100) / 100f
+        bg = argb(a, bg)
+    }
+    // text on an accent-filled button stays readable for any custom accent
+    val accOnBtn = if (conf.style == "tint" && cbg == null) base.accOnBtn else if (luma(base.acc) > 0.72f) 0xFF141413.toInt() else 0xFFFFFFFF.toInt()
+    return WPal(bg, fg, mut, soft, base.acc, accOnBtn, btnText)
+}
+
+private fun basePal(conf: WConf, wallFg: Int, wallBg: Int): WPal {
+    val acc = accentColor(conf.accent)
+    val lightAcc = luma(acc) > 0.62f
     return when (conf.style) {
         "ink" -> WPal(0xFF151514.toInt(), 0xFFF3F1EB.toInt(), 0xFFA9A59D.toInt(), 0xFF2C2B29.toInt(), acc, 0xFFFFFFFF.toInt(), 0xFF151514.toInt())
         "frost" -> WPal(argb(0.62f, 0xFFFFFF), 0xFF121211.toInt(), 0xFF4E4A44.toInt(), argb(0.10f, 0x121211), acc, 0xFFFFFFFF.toInt(), 0xFFFFFFFF.toInt())
@@ -74,6 +98,8 @@ class Ctx(val c: Canvas, val wPx: Float, val hPx: Float, val k: Float, val p: WP
     val H = hPx / k
     val pad = if (min(W, H) < 150f) 13f else 16f
     val showLabel = conf.label
+    /** The user's own title when they set one, otherwise the design's default heading. */
+    fun ttl(def: String): String = conf.title?.trim()?.takeIf { it.isNotEmpty() } ?: def
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)
 
@@ -230,12 +256,15 @@ fun renderWidget(conf: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
     val c = Canvas(bmp)
     val pal = widgetPal(conf, wfg, wbg)
     val ctx = Ctx(c, wPx.toFloat(), hPx.toFloat(), density, pal, conf)
-    val r = CORNERS[conf.corner] ?: 26f
+    val r = if (conf.radius >= 0) conf.radius.toFloat() else CORNERS[conf.corner] ?: 26f
     val clip = Path().apply { addRoundRect(RectF(0f, 0f, wPx.toFloat(), hPx.toFloat()), r * density, r * density, Path.Direction.CW) }
     c.save()
     c.clipPath(clip)
     if (pal.bg != 0) c.drawColor(pal.bg)
-    if (conf.style == "clear") {
+    if (conf.outline) {
+        val s = ctx.stroke(argb(0.28f, pal.fg), 1.5f)
+        c.drawRoundRect(RectF(0.75f * density, 0.75f * density, wPx - 0.75f * density, hPx - 0.75f * density), r * density, r * density, s)
+    } else if (conf.style == "clear") {
         val s = ctx.stroke((0x38 shl 24) or (wfg and 0xFFFFFF), 1f)
         c.drawRoundRect(RectF(0.5f * density, 0.5f * density, wPx - 0.5f * density, hPx - 0.5f * density), r * density, r * density, s)
     }

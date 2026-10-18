@@ -63,7 +63,7 @@ object Designs {
     /* ---------- shared layout bits ---------- */
 
     private fun Ctx.top(text: String, right: String? = null, opt: Boolean = true) {
-        if (!opt || showLabel) label(text, pad, pad + 11.5f, if (right != null) W - 2 * pad - measure(right, 12f, uiFace(400)) - 8f else W - 2 * pad)
+        if (!opt || showLabel) label(ttl(text), pad, pad + 11.5f, if (right != null) W - 2 * pad - measure(right, 12f, uiFace(400)) - 8f else W - 2 * pad)
         if (right != null) small(right, W - pad, pad + 11.5f, align = R)
     }
 
@@ -113,7 +113,7 @@ object Designs {
                 val bw = if (r.act != null) measure(r.act.label, 14f, uiFace(600)) + 28f else 0f
                 val lw = wideLeft(if (r.act != null) bw + 14f else 0f)
                 val mid = H / 2
-                label(r.k, 18f, mid - 14f, lw)
+                label(ttl(r.k), 18f, mid - 14f, lw)
                 t2(r.h, 18f, mid + 4f, 16f, if (hot) p.acc else p.fg, lw)
                 small(r.sub, 18f, mid + 21f, maxW = lw)
                 if (r.act != null) button(W - 18f - bw, mid - 20f, bw, 40f, if (hot) "acc" else "solid", r.act.kind, r.act.id, text = r.act.label)
@@ -125,7 +125,7 @@ object Designs {
                 para(r.sub, pad, H - pad - 32f, W - 2 * pad, 12f, uiFace(400), p.mut, 0f, 1.15f, 2)
             }
             else -> {
-                if (showLabel) label("Right now · ${r.k}", pad, pad + 11.5f, W - 2 * pad - 16f)
+                if (showLabel) label(ttl("Right now · ${r.k}"), pad, pad + 11.5f, W - 2 * pad - 16f)
                 if (hot) circle(W - pad - 4f, pad + 7.5f, 4f, fill(p.acc))
                 val hh = para(r.h, pad, pad + 26f, W - 2 * pad, 26f, numFace(), p.fg, numSpacing() + 0.015f, 1.05f, 2)
                 para(r.sub, pad, pad + 32f + hh, W - 2 * pad, 13f, uiFace(400), p.mut, 0f, 1.2f, 2)
@@ -162,7 +162,7 @@ object Designs {
             }
             "strip" -> {
                 val lw = wideLeft(66f)
-                label("Safe today · ${plural(s.days, "day")} left", 18f, 24f, lw)
+                label(ttl("Safe today · ${plural(s.days, "day")} left"), 18f, 24f, lw)
                 num(big, 18f, 50f, 26f, if (over) p.acc else p.fg)
                 small("of " + Fmt.money(s.per), 18f + lw, 50f, align = R)
                 bar(18f, 60f, lw, 4f, used, if (over) p.acc else p.fg)
@@ -248,7 +248,7 @@ object Designs {
         when (conf.design) {
             "timer" -> {
                 val lw = wideLeft(66f)
-                label(if (f.on) "Fasting · goal ${f.target}h" else "Not fasting", 18f, 24f, lw - 40f)
+                label(ttl(if (f.on) "Fasting · goal ${f.target}h" else "Not fasting"), 18f, 24f, lw - 40f)
                 if (f.on) small("${(f.pct * 100).roundToInt()}%", 18f + lw, 24f, align = R)
                 num(if (f.on) Fmt.hhmm(f.h) else "0:00", 18f, 50f, 26f)
                 bar(18f, 60f, lw, 4f, f.pct.toFloat(), p.acc)
@@ -290,7 +290,7 @@ object Designs {
         when (conf.design) {
             "dots" -> {
                 val lw = wideLeft(66f)
-                label(ct.name, 18f, 26f, lw - 40f)
+                label(ttl(ct.name), 18f, 26f, lw - 40f)
                 small("$v/${ct.goal}", 18f + lw, 26f, align = R)
                 val per = max(1, ((lw + 5f) / 19f).toInt())
                 for (i in 0 until ct.goal) {
@@ -355,7 +355,7 @@ object Designs {
         }
         when (conf.design) {
             "heat" -> {
-                if (showLabel) label("${h.name} · 20 weeks", pad, pad + 11.5f, W - 2 * pad - 52f)
+                if (showLabel) label(ttl("${h.name} · 20 weeks"), pad, pad + 11.5f, W - 2 * pad - 52f)
                 val base = pad + 22f + cap(26f) + 6f
                 val w = num(st.n.toString(), pad, base, 26f)
                 text("day streak · $rec", pad + w + 6f, base, 14f, uiFace(500), p.fg, maxW = W - 2 * pad - w - 60f)
@@ -404,7 +404,7 @@ object Designs {
             }
             else -> {
                 val lw = wideLeft(44f + 14f + 7 * 15f + 14f)
-                label("${h.name} · $rec", 18f, H / 2 - 6f, lw)
+                label(ttl("${h.name} · $rec"), 18f, H / 2 - 6f, lw)
                 num("${st.n} days", 18f, H / 2 + 17f, 22f)
                 val dx = W - 18f - 44f - 14f - (7 * 11f + 6 * 4f)
                 dots(dx, H / 2, 11f, 4f)
@@ -426,7 +426,7 @@ object Designs {
         when (conf.design) {
             "bar" -> {
                 val lw = wideLeft(66f)
-                label(g.name, 18f, 24f, lw - 60f)
+                label(ttl(g.name), 18f, 24f, lw - 60f)
                 small("${Fmt.trimNum(g.done)}/${Fmt.trimNum(g.target)}", 18f + lw, 24f, align = R)
                 bar(18f, 36f, lw, 6f, r.pct.toFloat(), if (a <= -1) p.acc else p.fg, r.exp.toFloat())
                 val w = small("$per/day · ", 18f, 64f, p.fg, 13f)
@@ -489,7 +489,7 @@ object Designs {
                 val tilesW = digits.length * tw + (digits.length - 1) * gap
                 val vx = W - 18f - 10f
                 val tx = vx - 10f - tilesW
-                label(d.name, 18f, H / 2 - 6f, tx - 18f - 10f)
+                label(ttl(d.name), 18f, H / 2 - 6f, tx - 18f - 10f)
                 text(Fmt.full(n.d), 18f, H / 2 + 14f, 15f, t2Face(), p.fg, maxW = tx - 18f - 10f)
                 digits.forEachIndexed { i, ch ->
                     val x0 = tx + i * (tw + gap)
@@ -667,7 +667,7 @@ object Designs {
         val right = when (nu.state) { "now" -> Fmt.dur(nu.left) + " left"; "next" -> "in " + Fmt.dur(nu.inMin); else -> Fmt.hm(nu.c.s) }
         val rw = max(numW(right, 22f), measure(nu.c.place, 12f, uiFace(400)))
         val lw = W - 36f - rw - 14f
-        label(lbl, 18f, H / 2 - 6f, lw)
+        label(ttl(lbl), 18f, H / 2 - 6f, lw)
         t2(nu.c.title, 18f, H / 2 + 15f, 17f, maxW = lw)
         num(right, W - 18f, H / 2 + 4f, 22f, if (nu.state == "next" && nu.inMin <= 15) p.acc else p.fg, R)
         small(nu.c.place, W - 18f, H / 2 + 21f, align = R)

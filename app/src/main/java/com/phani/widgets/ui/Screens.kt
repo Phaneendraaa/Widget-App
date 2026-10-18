@@ -54,9 +54,7 @@ object GalleryState { var cat by mutableStateOf("all") }
 fun GalleryScreen() {
     val p = pal()
     val d = AppStore.data
-    TopBar("New widget", "Tap one to pick its design, look and what it shows.") {
-        if (d.pro) Pill("Pro", "good") else ChipButton("Get Pro", solid = true) { Sheets.showPaywall() }
-    }
+    TopBar("New widget", "Tap one to pick its design, look and what it shows.")
     Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         com.phani.widgets.core.Catalog.cats.forEach { (k, l) ->
             val on = GalleryState.cat == k
@@ -96,8 +94,6 @@ fun GalleryScreen() {
                         Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("${t.designs.size} designs", style = T.small.copy(fontSize = 12.sp), color = p.muted, modifier = Modifier.weight(1f))
                             if (t.isNew) Badge("NEW", true)
-                            if (t.isNew && t.pro) Spacer(Modifier.size(6.dp))
-                            if (t.pro) Badge("PRO", false)
                         }
                     }
                 }
@@ -120,10 +116,6 @@ fun SettingsScreen() {
     val p = pal()
     val d = AppStore.data
     TopBar("Settings", "Works offline. Nothing leaves your phone.")
-    if (d.pro) Hero("PRO · LIFETIME", "Everything unlocked. Thank you.")
-    else Hero("WIDGET APP PRO", "Every design, every style, unlimited widgets.", "${CUR[d.cur]?.pro ?: "$9.99"} once. No subscription.") {
-        Sheets.showPaywall()
-    }
 
     SectionTitle("App appearance")
     Seg(listOf("auto" to "Auto", "light" to "Light", "dark" to "Dark"), d.theme) { AppStore.change { theme = it } }

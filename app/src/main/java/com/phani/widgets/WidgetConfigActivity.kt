@@ -87,7 +87,7 @@ class WidgetConfigActivity : ComponentActivity() {
                                 }
                                 Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 8.dp)) {
                                     Text(t.name, style = T.bodyB, color = p.ink, modifier = Modifier.weight(1f))
-                                    Text(d.name + if ((t.pro || d.pro) && !AppStore.data.pro) " · Pro" else "", style = T.small, color = p.muted)
+                                    Text(d.name, style = T.small, color = p.muted)
                                 }
                             }
                         }
@@ -99,7 +99,6 @@ class WidgetConfigActivity : ComponentActivity() {
     }
 
     private fun pick(id: Int, conf: WConf) {
-        // Pro looks still work during the prototype phase; the paywall gates them in the app.
         done(id, conf)
     }
 

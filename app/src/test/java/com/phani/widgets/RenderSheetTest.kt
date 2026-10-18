@@ -31,7 +31,11 @@ class RenderSheetTest {
         val k = 2.5f
         // smallest common launcher sizes: 2x2 ≈ 150dp, 4x1 ≈ 320x76, 4x2 ≈ 320x160
         val sizes = mapOf("s" to (148f to 148f), "w" to (320f to 76f), "m" to (320f to 168f))
-        val items = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, if (t.type == "now") "ink" else "paper", ref = Catalog.defaultRef(t.type)) } }
+        val items = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, if (t.type == "now") "ink" else "paper", ref = Catalog.defaultRef(t.type)) } } + listOf(
+            WConf("t", "spend", "ring", "s", accent = "#9BBF2A", bg = "#1E3A5F", radius = 8, outline = true, title = "Coffee money"),
+            WConf("t", "countdown", "flip", "w", accent = "#D6409F", bg = "#FDE2E4", alpha = 70, title = "Goa trip", ref = Catalog.defaultRef("countdown")),
+            WConf("t", "streak", "heat", "m", "ink", "#0EA5A4", fg = "#F0B400", radius = 0, ref = Catalog.defaultRef("streak")),
+        )
         val gap = 16
         val colW = (330 * k).toInt()
         val cells = items.map { c ->
