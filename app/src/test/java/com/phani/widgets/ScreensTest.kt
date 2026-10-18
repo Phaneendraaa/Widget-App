@@ -83,6 +83,8 @@ class ScreensTest {
         step { Create.close(); Create.startFrom("streak", "big"); val c = Create.conf!!; AppStore.change { habits.first { it.id == c.ref }.apply { name = "Run"; listOf(1L, 2L, 3L, 5L, 6L).forEach { done.add(today().minusDays(it).toString()) } } } }
         rule.runOnIdle { }; shot("Editor, streak calendar")
         step { Create.close(); Create.startEdit(AppStore.data.placed.first { it.type == "counter" }) }; shot("Editor, counter history")
+        step { Create.close(); Create.startFrom("spend", "number"); AppStore.change { bPeriod = "custom"; bStart = today().toString(); bEnd = today().plusDays(9).toString() }; Create.conf = Create.conf!!.copy(opt = "period") }
+        shot("Editor, budget options")
         step { Create.close(); Create.startFrom("note", "sticky") }; shot("Editor, note")
         step { Create.close(); Create.startFrom("attendance", "bars") }; shot("Editor, attendance")
         step { Create.close(); Create.startFrom("next", "card") }; shot("Editor, schedule")

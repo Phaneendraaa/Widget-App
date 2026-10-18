@@ -86,15 +86,36 @@ object Fmt {
 
 /* ---------------- money ---------------- */
 
-class SpendState(val per: Double, val left: Double, val today: Double, val days: Int, val spent: Double, val resets: LocalDate, val todays: List<Spend>)
+class SpendState(
+    val per: Double, val left: Double, val today: Double, val days: Int, val spent: Double, val resets: LocalDate, val todays: List<Spend>,
+    /** Whole budget, what's left of it, and the period's name ("month", "week", or "until Nov 20"). */
+    val total: Double, val periodLeft: Double, val periodName: String, val totalDays: Int,
+    /** What's left for the rest of this week, and how many days that covers. */
+    val weekLeft: Double, val weekDays: Int,
+)
+
+/** The budget period around today: start (inclusive) and end (exclusive). */
+fun budgetPeriod(t: LocalDate = today()): Pair<LocalDate, LocalDate> = when (D.bPeriod) {
+    "week" -> { val st = t.minusDays(((t.dayOfWeek.value - D.weekStart + 7) % 7).toLong()); st to st.plusDays(7) }
+    "custom" -> {
+        val st = D.bStart?.let { pd(it) } ?: t
+        val en = (D.bEnd?.let { pd(it) } ?: t.plusDays(13)).plusDays(1)
+        st to (if (en.isAfter(st)) en else st.plusDays(1))
+    }
+    else -> {
+        val p = D.payday
+        var st = t.withDayOfMonth(min(p, t.lengthOfMonth()))
+        if (st.isAfter(t)) st = st.minusMonths(1).let { it.withDayOfMonth(min(p, it.lengthOfMonth())) }
+        st to st.plusMonths(1).let { it.withDayOfMonth(min(p, it.lengthOfMonth())) }
+    }
+}
 
 fun spendState(): SpendState {
     val t = today()
-    val p = D.payday
-    var st = t.withDayOfMonth(min(p, t.lengthOfMonth()))
-    if (st.isAfter(t)) st = st.minusMonths(1)
-    val nx = st.plusMonths(1)
-    val left = daysBetween(t, nx)
+    val (st, nx) = budgetPeriod(t)
+    val inside = !t.isBefore(st) && t.isBefore(nx)
+    val left = if (inside) daysBetween(t, nx) else 0
+    val totalDays = max(1, daysBetween(st, nx))
     var before = 0.0
     var tod = 0.0
     val ti = t.toString()
@@ -103,8 +124,28 @@ fun spendState(): SpendState {
         if (d.isBefore(st) || !d.isBefore(nx)) return@forEach
         if (it.date == ti) tod += it.amt else before += it.amt
     }
-    val per = (D.budget - before) / max(1, left)
-    return SpendState(per, per - tod, tod, left, before + tod, nx, D.log.filter { it.date == ti })
+    // flexible: what's left is shared over the days left, so a cheap day makes tomorrow bigger
+    val per = if (!inside) 0.0 else if (D.bFlex) (D.budget - before) / max(1, left) else D.budget / totalDays
+    val wEnd = t.plusDays((7 - ((t.dayOfWeek.value - D.weekStart + 7) % 7)).toLong())
+    val wDays = if (inside) max(1, daysBetween(t, if (wEnd.isBefore(nx)) wEnd else nx)) else 0
+    val name = when (D.bPeriod) { "week" -> "week"; "custom" -> "until " + Fmt.short(nx.minusDays(1)); else -> "month" }
+    return SpendState(per, per - tod, tod, left, before + tod, nx, D.log.filter { it.date == ti },
+        D.budget, D.budget - before - tod, name, totalDays, per * wDays - tod, wDays)
+}
+
+/** What a spending widget shows, by its option: today's safe amount, this week's, or the whole period's. */
+class SpendView(val value: Double, val label: String, val ringSub: String, val of: String, val used: Float)
+
+fun spendView(s: SpendState, mode: String?): SpendView {
+    val m = if (mode == "week" && D.bPeriod == "week") "period" else mode ?: "day"
+    return when (m) {
+        "week" -> SpendView(s.weekLeft, "Left this week", "this week",
+            "of ${Fmt.money(s.per * s.weekDays)} · ${plural(s.weekDays, "day")}", (s.today / max(1.0, s.per * s.weekDays)).toFloat())
+        "period" -> SpendView(s.periodLeft, if (s.periodName.startsWith("until")) "Left ${s.periodName}" else "Left this ${s.periodName}", "left",
+            "of ${Fmt.money(s.total)} · ${plural(s.days, "day")} to go", (s.spent / max(1.0, s.total)).toFloat())
+        else -> SpendView(s.left, "Safe to spend", if (s.left < 0) "over today" else "left today",
+            "of ${Fmt.money(s.per)} today", (s.today / max(1.0, s.per)).toFloat())
+    }
 }
 
 class SubNext(val s: Sub, val d: LocalDate, val days: Int)

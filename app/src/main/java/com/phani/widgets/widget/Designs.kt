@@ -269,42 +269,45 @@ object Designs {
 
     private fun spend(x: Ctx) = with(x) {
         val s = spendState()
-        val over = s.left < 0
+        val v = com.phani.widgets.core.spendView(s, conf.opt)
+        val over = v.value < 0
         val q = (CUR[D.cur] ?: CUR.getValue("USD")).quick
-        val big = if (over) "−" + Fmt.money(-s.left) else Fmt.money(s.left)
-        val used = (s.today / max(1.0, s.per)).toFloat().coerceIn(0f, 1f)
+        val big = if (over) "−" + Fmt.money(-v.value) else Fmt.money(v.value)
+        val used = v.used.coerceIn(0f, 1f)
+        if (D.budget <= 0) { empty(v.label, "Set your budget"); return@with }
         when (conf.design) {
             "ring" -> {
-                top("Safe to spend")
+                top(v.label)
                 val bh = min(36f, H * 0.22f)
                 val btnY = H - pad - bh
                 val rs = min(84f, btnY - 6f - below)
                 val sw = max(5f, rs * 0.085f)
                 val cy = below + rs / 2
                 ring(W / 2, cy, rs, sw, 1f - used, if (over) p.acc else p.fg)
-                val bigR = if (over) "−" + Fmt.money(-s.left, 0) else Fmt.money(s.left, 0)
+                val bigR = if (over) "−" + Fmt.money(-v.value, 0) else Fmt.money(v.value, 0)
                 val fs = fitNum(bigR, min(19f, rs * 0.25f), rs - 2 * sw - 10f)
                 val showSub = rs >= 66f
                 num(bigR, W / 2, cy + (if (showSub) 1f else cap(fs) / 2), fs, if (over) p.acc else p.fg, C)
-                if (showSub) small(if (over) "over today" else "left today", W / 2, cy + 14f, size = 9.5f, align = C)
+                if (showSub) small(if (over) "over" else v.ringSub, W / 2, cy + 14f, size = 9.5f, align = C)
                 val bw = (W - 2 * pad - 6f) / 2
                 button(pad, btnY, bw, bh, "solid", "spend-q", value = q[0].toString(), text = "+${q[0]}")
                 button(pad + bw + 6f, btnY, bw, bh, "ghost", "spend-open", ic = Paths.plus)
             }
             "strip" -> {
                 val lw = wideLeft(66f)
-                label(ttl("Safe today · ${plural(s.days, "day")} left"), 18f, 24f, lw)
+                label(ttl(v.label + " · " + plural(s.days, "day") + " left"), 18f, 24f, lw)
                 num(big, 18f, 50f, 26f, if (over) p.acc else p.fg)
-                small("of " + Fmt.money(s.per), 18f + lw, 50f, align = R)
+                small(v.of.substringBefore(" ·").substringBefore(" today"), 18f + lw, 50f, align = R)
                 bar(18f, 60f, lw, 4f, used, if (over) p.acc else p.fg)
                 button(W - 18f - 52f, H / 2 - 26f, 52f, 52f, "solid", "spend-open", ic = Paths.plus, icSize = 20f)
             }
             "receipt" -> {
-                top("Safe to spend · resets " + Fmt.short(s.resets))
+                top(v.label + " · resets " + Fmt.short(s.resets))
                 val nb = pad + 26f + cap(44f)
-                num(big, pad, nb, 44f, if (over) p.acc else p.fg)
-                small("left of " + Fmt.money(s.per), W - pad, nb - 15f, align = R)
-                small("today", W - pad, nb - 1f, align = R)
+                val bw0 = fitNum(big, 44f, W - 2 * pad - 96f)
+                num(big, pad, nb, bw0, if (over) p.acc else p.fg)
+                small("left " + v.of.substringBefore(" ·"), W - pad, nb - 15f, align = R, maxW = 96f)
+                small(if (conf.opt == null || conf.opt == "day") "" else v.of.substringAfter("· ", ""), W - pad, nb - 1f, align = R, maxW = 96f)
                 dashed(pad, nb + 12f, W - pad, p.soft)
                 var y = nb + 30f
                 val fit = ((H - pad - 40f - 10f - y) / 19f).toInt() + 1
@@ -315,19 +318,19 @@ object Designs {
                     text(Fmt.money(r.amt), W - pad, y, 13f, uiFace(500), p.fg, align = R); y += 19f
                 }
                 val bw = (W - 2 * pad - 12f) / 3
-                q.forEachIndexed { i, v -> button(pad + i * (bw + 6f), H - pad - 40f, bw, 40f, "ghost", "spend-q", value = v.toString(), text = "+$v") }
+                q.forEachIndexed { i, qv -> button(pad + i * (bw + 6f), H - pad - 40f, bw, 40f, "ghost", "spend-q", value = qv.toString(), text = "+$qv") }
             }
             else -> {
-                top("Safe to spend")
+                top(v.label)
                 val bh = min(40f, H * 0.24f)
                 val btnTop = H - pad - bh
                 val subBase = btnTop - 10f
                 val sz = fitNum(big, min(clampSz(30f, 0.24f, 46f, W), (subBase - 18f - below) / 0.74f), W - 2 * pad)
                 num(big, pad, subBase - 18f, sz, if (over) p.acc else p.fg)
-                small((if (over) "over " else "left of ") + Fmt.money(s.per) + " today", pad, subBase, maxW = W - 2 * pad)
+                small((if (over) "over, " else "left ") + v.of, pad, subBase, maxW = W - 2 * pad)
                 val bw = (W - 2 * pad - 6f) / 2
                 button(pad, btnTop, bw, bh, "solid", "spend-q", value = q[0].toString(), text = "+${q[0]}")
-                button(pad + bw + 6f, btnTop, bw, bh, "ghost", "spend-q", value = q[1].toString(), text = "+${q[1]}")
+                button(pad + bw + 6f, btnTop, bw, bh, "ghost", "spend-open", ic = Paths.plus)
             }
         }
     }
@@ -586,7 +589,7 @@ object Designs {
                 small(" · ${r.left}d", pad + w, H - pad - 2f, p.fg, maxW = W - 2 * pad - w)
             }
             else -> {
-                if (showLabel) label(ttl(g.name), pad, pad + 11.5f, W - 2 * pad - 40f)
+                if (showLabel) label(ttl(g.name), pad, pad + 11.5f, W - 2 * pad - 48f)
                 button(W - pad - 32f, pad - 6f, 32f, 32f, "solid", "goal", g.id, ic = Paths.plus, icSize = 14f)
                 val rs = min(48f, H - pad - 38f - below - 4f)
                 val cy = below + 2f + rs / 2

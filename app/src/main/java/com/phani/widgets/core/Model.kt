@@ -39,6 +39,8 @@ data class WConf(
     val radius: Int = -1,
     val outline: Boolean = false,
     val title: String? = null,
+    /** A per-widget option, e.g. what a spending widget shows: "day", "week" or "period". */
+    val opt: String? = null,
 )
 
 class AppData(
@@ -67,6 +69,14 @@ class AppData(
     val bound: MutableMap<Int, WConf>,
     var howSeen: Boolean = false,
     val notes: MutableList<Note> = mutableListOf(),
+    /** Budget period: "month" (from payday), "week", or "custom" dates such as a trip. */
+    var bPeriod: String = "month",
+    var bStart: String? = null,
+    var bEnd: String? = null,
+    /** 1 = weeks start Monday, 7 = Sunday. */
+    var weekStart: Int = 1,
+    /** true: spend less today and the coming days get more (and the reverse). false: the same amount every day. */
+    var bFlex: Boolean = true,
 )
 
 /* ---------------- JSON ---------------- */
@@ -79,13 +89,13 @@ fun WConf.toJson(): JSONObject = JSONObject()
     .put("id", id).put("type", type).put("design", design).put("size", size).put("style", style)
     .put("accent", accent).put("font", font).put("corner", corner).put("label", label).put("ref", ref ?: JSONObject.NULL)
     .put("bg", bg ?: JSONObject.NULL).put("fg", fg ?: JSONObject.NULL).put("alpha", alpha).put("radius", radius)
-    .put("outline", outline).put("title", title ?: JSONObject.NULL)
+    .put("outline", outline).put("title", title ?: JSONObject.NULL).put("opt", opt ?: JSONObject.NULL)
 
 fun wconf(o: JSONObject) = WConf(
     o.getString("id"), o.getString("type"), o.getString("design"), o.getString("size"),
     o.optString("style", "paper"), o.optString("accent", "signal"), o.optString("font", "grotesk"),
     o.optString("corner", "round"), o.optBoolean("label", true), o.optStr("ref"),
-    o.optStr("bg"), o.optStr("fg"), o.optInt("alpha", 100), o.optInt("radius", -1), o.optBoolean("outline", false), o.optStr("title"),
+    o.optStr("bg"), o.optStr("fg"), o.optInt("alpha", 100), o.optInt("radius", -1), o.optBoolean("outline", false), o.optStr("title"), o.optStr("opt"),
 )
 
 fun AppData.toJson(): JSONObject {
@@ -121,6 +131,7 @@ fun AppData.toJson(): JSONObject {
     val b = JSONObject(); bound.forEach { (k, v) -> b.put(k.toString(), v.toJson()) }
     o.put("bound", b)
     o.put("howSeen", howSeen)
+    o.put("bPeriod", bPeriod).put("bStart", bStart ?: JSONObject.NULL).put("bEnd", bEnd ?: JSONObject.NULL).put("weekStart", weekStart).put("bFlex", bFlex)
     o.put("notes", JSONArray(notes.map { JSONObject().put("id", it.id).put("text", it.text) }))
     return o
 }
@@ -163,6 +174,8 @@ fun appDataFrom(o: JSONObject): AppData {
         placed = o.getJSONArray("placed").objs().map { wconf(it) }.toMutableList(),
         bound = bound,
         howSeen = o.optBoolean("howSeen", false),
+        bPeriod = o.optString("bPeriod", "month"), bStart = o.optStr("bStart"), bEnd = o.optStr("bEnd"),
+        weekStart = o.optInt("weekStart", 1), bFlex = o.optBoolean("bFlex", true),
         notes = (o.optJSONArray("notes") ?: JSONArray()).objs().map { Note(it.getString("id"), it.getString("text")) }.toMutableList(),
     )
 }

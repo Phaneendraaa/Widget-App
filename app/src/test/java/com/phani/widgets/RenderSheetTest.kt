@@ -34,6 +34,9 @@ class RenderSheetTest {
         val sizes = mapOf("s" to (176f to 176f), "w" to (364f to 92f), "m" to (364f to 192f))
         val items = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, if (t.type == "now") "ink" else "paper", ref = Catalog.defaultRef(t.type)) } } + listOf(
             WConf("t", "spend", "ring", "s", accent = "#9BBF2A", bg = "#1E3A5F", radius = 8, outline = true, title = "Coffee money"),
+            WConf("t", "spend", "number", "s", opt = "period"),
+            WConf("t", "spend", "strip", "w", opt = "week"),
+            WConf("t", "spend", "receipt", "m", opt = "period"),
             WConf("t", "countdown", "flip", "w", accent = "#D6409F", bg = "#FDE2E4", alpha = 70, title = "Goa trip", ref = Catalog.defaultRef("countdown")),
             WConf("t", "streak", "heat", "m", "ink", "#0EA5A4", fg = "#F0B400", radius = 0, ref = Catalog.defaultRef("streak")),
         )

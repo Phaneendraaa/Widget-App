@@ -348,7 +348,7 @@ private fun InfoFields(c: WConf) {
             "countdown" -> CountdownInfo(c)
             "streak" -> StreakInfo(c)
             "counter" -> CounterInfo(c)
-            "spend" -> SpendInfo()
+            "spend" -> SpendInfo(c)
             "subs" -> SubsInfo()
             "clock" -> ClockInfo()
             "fast" -> FastInfo()
@@ -411,13 +411,42 @@ private fun CounterInfo(c: WConf) {
 }
 
 @Composable
-private fun SpendInfo() {
+private fun SpendInfo(c: WConf) {
     AppStore.rev
     val d = AppStore.data
+    val p = pal()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FieldLabel("Budget for")
+        Seg(listOf("month" to "A month", "week" to "A week", "custom" to "Set dates"), d.bPeriod) { v ->
+            AppStore.change { bPeriod = v; if (v == "custom" && bStart == null) { bStart = today().toString(); bEnd = today().plusDays(13).toString() } }
+        }
+    }
+    when (d.bPeriod) {
+        "week" -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FieldLabel("Week starts on")
+            Seg(listOf(1 to "Monday", 7 to "Sunday", 6 to "Saturday"), d.weekStart) { v -> AppStore.change { weekStart = v } }
+        }
+        "custom" -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            DateField("From", d.bStart ?: today().toString(), Modifier.weight(1f)) { v -> AppStore.change { bStart = v; if ((bEnd ?: v) < v) bEnd = v } }
+            DateField("To", d.bEnd ?: today().plusDays(13).toString(), Modifier.weight(1f)) { v -> if (v >= (d.bStart ?: v)) AppStore.change { bEnd = v } else Toaster.show("Pick a day after the start") }
+        }
+        else -> Picker("Starts again on", "Day ${d.payday} of each month (payday)", (1..28).map { it to "Day $it" }) { v -> AppStore.change { payday = v } }
+    }
     var budget by remember { mutableStateOf(if (d.budget > 0) Fmt.trimNum(d.budget) else "") }
-    Field("Monthly budget (${d.cur})", budget, { budget = it; AppStore.change { this.budget = maxOf(0.0, num(it) ?: 0.0) } }, "2000", KeyboardType.Decimal)
-    Picker("Starts again on", "Day ${d.payday} of each month", (1..28).map { it to "Day $it" }) { v -> AppStore.change { payday = v } }
-    Text("Not counting rent or bills? Leave them out of the budget.", style = T.small, color = pal().muted)
+    val forWhat = when (d.bPeriod) { "week" -> "for the week"; "custom" -> "for these dates"; else -> "for the month" }
+    Field("Budget $forWhat (${d.cur})", budget, { budget = it; AppStore.change { this.budget = maxOf(0.0, num(it) ?: 0.0) } }, "2000", KeyboardType.Decimal)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FieldLabel("Each day's amount")
+        Seg(listOf(true to "Adjusts as I spend", false to "Same every day"), d.bFlex) { v -> AppStore.change { bFlex = v } }
+        Text(if (d.bFlex) "Spend less today and the coming days get a little more. Spend more and they get a little less, so the total still lasts."
+            else "The budget is split evenly. Every day gets the same amount, whatever you spent yesterday.", style = T.small, color = p.muted)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FieldLabel("This widget shows")
+        val opts = listOf("day" to "Today", "week" to "This week", "period" to when (d.bPeriod) { "week" -> "Whole week"; "custom" -> "Whole trip"; else -> "Whole month" })
+            .filter { !(it.first == "week" && d.bPeriod == "week") }
+        Seg(opts, c.opt ?: "day") { v -> Create.conf = c.copy(opt = v) }
+    }
     SpendHistory()
 }
 
