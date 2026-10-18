@@ -99,6 +99,7 @@ object Widgets {
 
     fun prepare(ctx: Context) {
         AppStore.load(ctx)
+        Dyn.load(ctx)
         WFonts.init(ctx.assets)
         if (AppStore.onChanged == null) {
             val app = ctx.applicationContext
@@ -109,6 +110,7 @@ object Widgets {
     fun providerFor(size: String): Class<*> = providers.first { it.second == size }.first
 
     fun updateAll(ctx: Context) {
+        Dyn.load(ctx)
         val m = AppWidgetManager.getInstance(ctx)
         providers.forEach { (cls, size) ->
             m.getAppWidgetIds(ComponentName(ctx, cls)).forEach { render(ctx, m, it, size) }

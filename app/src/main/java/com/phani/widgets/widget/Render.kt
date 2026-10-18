@@ -26,6 +26,26 @@ class Hit(val rect: RectF, val act: String, val id: String? = null, val value: S
 class Rendered(val bitmap: Bitmap, val hits: List<Hit>)
 
 /** Fonts as Android typefaces, shared by every widget render. */
+/** The phone's wallpaper colours (Material You, Android 12+), refreshed whenever widgets are drawn. */
+object Dyn {
+    var ok = false
+    var dark = false
+    var bg = 0; var fg = 0; var mut = 0; var soft = 0; var acc = 0
+    fun load(ctx: android.content.Context) {
+        dark = (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (android.os.Build.VERSION.SDK_INT < 31) { ok = false; return }
+        fun c(id: Int) = ctx.getColor(id)
+        if (dark) {
+            bg = c(android.R.color.system_neutral2_800); fg = c(android.R.color.system_accent2_50)
+            mut = c(android.R.color.system_accent2_200); soft = c(android.R.color.system_neutral2_700); acc = c(android.R.color.system_accent1_200)
+        } else {
+            bg = c(android.R.color.system_accent2_50); fg = c(android.R.color.system_neutral1_900)
+            mut = c(android.R.color.system_accent2_700); soft = c(android.R.color.system_accent2_100); acc = c(android.R.color.system_accent1_600)
+        }
+        ok = true
+    }
+}
+
 object WFonts {
     private val cache = HashMap<String, Typeface>()
     private var assets: AssetManager? = null
@@ -79,6 +99,11 @@ private fun basePal(conf: WConf, wallFg: Int, wallBg: Int): WPal {
     val acc = accentColor(conf.accent)
     val lightAcc = luma(acc) > 0.62f
     return when (conf.style) {
+        "you" -> when {
+            Dyn.ok -> WPal(Dyn.bg, Dyn.fg, Dyn.mut, Dyn.soft, if (conf.accent == "signal") Dyn.acc else acc, if (luma(Dyn.acc) > 0.6f) 0xFF141413.toInt() else 0xFFFFFFFF.toInt(), Dyn.bg)
+            Dyn.dark -> WPal(0xFF151514.toInt(), 0xFFF3F1EB.toInt(), 0xFFA9A59D.toInt(), 0xFF2C2B29.toInt(), acc, 0xFFFFFFFF.toInt(), 0xFF151514.toInt())
+            else -> WPal(0xFFFFFFFF.toInt(), 0xFF121211.toInt(), 0xFF5D5952.toInt(), 0xFFECEAE4.toInt(), acc, 0xFFFFFFFF.toInt(), 0xFFFFFFFF.toInt())
+        }
         "ink" -> WPal(0xFF151514.toInt(), 0xFFF3F1EB.toInt(), 0xFFA9A59D.toInt(), 0xFF2C2B29.toInt(), acc, 0xFFFFFFFF.toInt(), 0xFF151514.toInt())
         "frost" -> WPal(argb(0.62f, 0xFFFFFF), 0xFF121211.toInt(), 0xFF4E4A44.toInt(), argb(0.10f, 0x121211), acc, 0xFFFFFFFF.toInt(), 0xFFFFFFFF.toInt())
         "smoke" -> WPal(argb(0.58f, 0x121211), 0xFFF6F4EE.toInt(), argb(0.74f, 0xF6F4EE), argb(0.16f, 0xF6F4EE), acc, 0xFFFFFFFF.toInt(), 0xFF141413.toInt())

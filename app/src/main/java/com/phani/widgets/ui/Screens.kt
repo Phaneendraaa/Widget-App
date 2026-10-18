@@ -36,6 +36,7 @@ import com.phani.widgets.core.CUR
 import com.phani.widgets.core.Fmt
 import com.phani.widgets.core.sampleData
 import com.phani.widgets.core.today
+import com.phani.widgets.core.toJson
 
 val WALLS = linkedMapOf(
     "stone" to (Color(0xFFD7D3CA) to Color(0xFF1C1C1A)),
@@ -63,6 +64,9 @@ fun SettingsScreen() {
     SectionTitle("App appearance")
     Seg(listOf("auto" to "Auto", "light" to "Light", "dark" to "Dark"), d.theme) { AppStore.change { theme = it } }
 
+    SectionTitle("Reminders")
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { RemindersSection() }
+
     SectionTitle("Region")
     CurrencyPicker()
     Spacer(Modifier.height(12.dp))
@@ -79,9 +83,6 @@ fun SettingsScreen() {
         Feat(Ic.bolt, "Easy on battery", "Widgets change when you tap them, or when the day or your schedule changes.")
     }
 
-    SectionTitle("Reminders")
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { RemindersSection() }
-
     SectionTitle("Home screen widgets")
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val onPhone = remember(AppStore.rev) { com.phani.widgets.widget.Widgets.placedCount(ctx) }
@@ -90,6 +91,9 @@ fun SettingsScreen() {
             trailing = { Text("$onPhone", style = T.bodyB, color = p.ink) })
         ListRow("How to add and keep them updated", divider = false, trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) { Sheets.help = true }
     }
+
+    SectionTitle("Backup")
+    BackupSection()
 
     SectionTitle("Data")
     var confirm by remember { mutableStateOf(false) }
@@ -134,4 +138,43 @@ private fun CurrencyPicker() {
             }
         }
     }
+}
+
+
+/** Save everything to a file you keep (Drive, Downloads…), and bring it back on a new phone. */
+@Composable
+private fun BackupSection() {
+    val p = pal()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val save = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            ctx.contentResolver.openOutputStream(uri)?.use { it.write(AppStore.data.toJson().toString(2).toByteArray()) }
+            Toaster.show("Backup saved")
+        } catch (e: Exception) { Toaster.show("Couldn't save the backup") }
+    }
+    val open = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            val txt = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: return@rememberLauncherForActivityResult
+            val nd = com.phani.widgets.core.appDataFrom(org.json.JSONObject(txt))
+            // widgets already on this phone keep their place; the backup's ids belonged to the old phone
+            nd.bound.clear(); nd.bound.putAll(AppStore.data.bound)
+            nd.onboarded = true
+            AppStore.change(true) { }
+            AppStore.replace(nd)
+            Toaster.show("Restored ${nd.placed.size} widgets and all your info", true)
+        } catch (e: Exception) { Toaster.show("That file isn't a Widget App backup") }
+    }
+    ListCard {
+        ListRow("Save a backup", "A file with all your widgets and info. Keep it in Drive or Downloads.",
+            trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) {
+            save.launch("widget-app-backup-${com.phani.widgets.core.today()}.json")
+        }
+        ListRow("Restore from a backup", "On a new phone, pick your backup file.", divider = false,
+            trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) {
+            open.launch(arrayOf("application/json", "application/octet-stream", "text/plain", "*/*"))
+        }
+    }
+    Text("Your phone's own Google backup also keeps the app's data when it's switched on.", style = T.small, color = p.muted, modifier = Modifier.padding(top = 8.dp))
 }

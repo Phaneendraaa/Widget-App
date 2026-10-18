@@ -38,7 +38,7 @@ object Catalog {
             listOf(DesignDef("moon", "Moon", "s"), DesignDef("phase", "Phase", "w"))),
     )
     val cats = listOf("all" to "All", "smart" to "Smart", "money" to "Money", "health" to "Health", "habits" to "Habits & goals", "time" to "Time", "work" to "Schedule", "student" to "Student")
-    val styles = listOf(Triple("paper", "Paper", false), Triple("ink", "Ink", false), Triple("tint", "Tint", true), Triple("frost", "Frost", true), Triple("smoke", "Smoke", true), Triple("clear", "Clear", true))
+    val styles = listOf(Triple("you", "Wallpaper", false), Triple("paper", "Paper", false), Triple("ink", "Ink", false), Triple("tint", "Tint", true), Triple("frost", "Frost", true), Triple("smoke", "Smoke", true), Triple("clear", "Clear", true))
     val fonts = listOf(Triple("grotesk", "Grotesk", false), Triple("serif", "Serif", true), Triple("mono", "Mono", true))
     val corners = listOf("round" to "Round", "soft" to "Soft", "sharp" to "Sharp")
 
