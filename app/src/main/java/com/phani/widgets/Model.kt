@@ -31,6 +31,8 @@ object Styles {
         CdStyle("Black & Yellow", R.drawable.widget_bg_0, 0xFF0F0F0F.toInt(), 0xFFFFFFFF.toInt(), 0xFFFFC107.toInt(), 0xFF9A9A9A.toInt()),
         CdStyle("Minimal", R.drawable.widget_bg_1, 0xFFF2F2F2.toInt(), 0xFF111111.toInt(), 0xFF111111.toInt(), 0xFF7A7A7A.toInt()),
         CdStyle("Blue", R.drawable.widget_bg_2, 0xFF2F6BFF.toInt(), 0xFFFFFFFF.toInt(), 0xFFFFFFFF.toInt(), 0xFFD6E2FF.toInt()),
+        CdStyle("Mint", R.drawable.widget_bg_3, 0xFFDDF5E4.toInt(), 0xFF10321F.toInt(), 0xFF1B7F4B.toInt(), 0xFF5E8A70.toInt()),
+        CdStyle("Sunset", R.drawable.widget_bg_4, 0xFFFF6A3D.toInt(), 0xFFFFFFFF.toInt(), 0xFF1A1A1A.toInt(), 0xFFFFE0D3.toInt()),
     )
 
     fun get(i: Int): CdStyle = all.getOrElse(i) { all[0] }

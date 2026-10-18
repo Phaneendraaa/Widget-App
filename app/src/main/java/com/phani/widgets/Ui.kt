@@ -26,21 +26,25 @@ import androidx.compose.ui.unit.sp
 fun CountdownCard(
     c: Countdown,
     modifier: Modifier = Modifier,
-    actions: @Composable RowScope.() -> Unit = {},
+    compact: Boolean = false,
+    actions: @Composable (RowScope.() -> Unit)? = null,
 ) {
     val st = Styles.get(c.style)
     val shown = c.shown()
+    val pad = if (compact) 14.dp else 20.dp
+    val bigSize = if (compact) 40.sp else 64.sp
+    val capSize = if (compact) 12.sp else 16.sp
     Column(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(if (compact) 22.dp else 28.dp))
             .background(Color(st.bg))
-            .padding(20.dp)
+            .padding(pad)
     ) {
         Text(
             c.title.uppercase(),
             color = Color(st.sub),
-            fontSize = 12.sp,
+            fontSize = if (compact) 10.sp else 12.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.5.sp,
             maxLines = 1,
@@ -50,27 +54,29 @@ fun CountdownCard(
             Text(
                 shown.big,
                 color = Color(st.accent),
-                fontSize = 64.sp,
+                fontSize = bigSize,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             Text(
                 shown.caption,
                 color = Color(st.text),
-                fontSize = 16.sp,
+                fontSize = capSize,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 14.dp),
+                modifier = Modifier.padding(bottom = if (compact) 8.dp else 14.dp),
             )
         }
-        Text(c.dateLabel(), color = Color(st.sub), fontSize = 13.sp)
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = actions,
-        )
+        Text(c.dateLabel(), color = Color(st.sub), fontSize = if (compact) 11.sp else 13.sp)
+        if (actions != null) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = actions,
+            )
+        }
     }
 }
