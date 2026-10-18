@@ -6,10 +6,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onRoot
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.core.app.ApplicationProvider
 import com.phani.widgets.core.AppStore
 import com.phani.widgets.core.Sub
@@ -37,7 +35,7 @@ import java.io.File
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "w393dp-h852dp-xxhdpi")
 class ScreensTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
     fun screens() {
@@ -48,7 +46,10 @@ class ScreensTest {
         val shots = mutableListOf<Pair<String, Bitmap>>()
         fun shot(name: String) {
             rule.waitForIdle()
-            shots += name to rule.onRoot().captureToImage().asAndroidBitmap()
+            val v = rule.activity.window.decorView
+            val b = Bitmap.createBitmap(maxOf(1, v.width), maxOf(1, v.height), Bitmap.Config.ARGB_8888)
+            v.draw(Canvas(b))
+            shots += name to b
         }
         fun step(block: () -> Unit) { rule.runOnIdle(block) }
 
