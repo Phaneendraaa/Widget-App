@@ -392,8 +392,7 @@ private fun StreakInfo(c: WConf) {
     val h = AppStore.data.habits.firstOrNull { it.id == c.ref } ?: return
     var name by remember(h.id) { mutableStateOf(h.name) }
     Field("Habit", name, { name = it; AppStore.change { h.name = it.take(30) } }, "Run")
-    val t = today().toString()
-    ToggleRow("I did it today", t in h.done) { AppStore.change { if (t in h.done) h.done.remove(t) else h.done.add(t) } }
+    HabitCalendar(h)
 }
 
 @Composable
@@ -408,6 +407,7 @@ private fun CounterInfo(c: WConf) {
         Field("Daily goal", goal, { goal = it; it.toIntOrNull()?.let { g -> AppStore.change { ct.goal = g.coerceIn(1, 999) } } }, "8", KeyboardType.Number, Modifier.weight(1f))
         Field("Counted in", unit, { unit = it; AppStore.change { ct.unit = it.ifBlank { "times" }.take(14) } }, "glasses", modifier = Modifier.weight(1f))
     }
+    CounterHistory(ct)
 }
 
 @Composable
@@ -418,6 +418,7 @@ private fun SpendInfo() {
     Field("Monthly budget (${d.cur})", budget, { budget = it; AppStore.change { this.budget = maxOf(0.0, num(it) ?: 0.0) } }, "2000", KeyboardType.Decimal)
     Picker("Starts again on", "Day ${d.payday} of each month", (1..28).map { it to "Day $it" }) { v -> AppStore.change { payday = v } }
     Text("Not counting rent or bills? Leave them out of the budget.", style = T.small, color = pal().muted)
+    SpendHistory()
 }
 
 @Composable

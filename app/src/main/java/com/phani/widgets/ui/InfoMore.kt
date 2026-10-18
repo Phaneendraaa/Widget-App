@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,8 +49,11 @@ internal fun FastInfo() {
         FieldLabel("Goal")
         Seg(listOf(12, 14, 16, 18, 20).map { it to "${it}h" }, f.target) { v -> AppStore.change { fast.target = v } }
     }
-    if (f.start == null) BigButton("Start fasting now", kind = "ghost") { AppStore.change { fast.start = System.currentTimeMillis() } }
-    else BigButton("End this fast", kind = "ghost") { AppStore.change { fast.start = null } }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    BigButton(if (f.start == null) "Start a fast" else "Change or end this fast", kind = "ghost") {
+        ctx.startActivity(com.phani.widgets.QuickActivity.intent(ctx, "fast", null, null))
+    }
+    FastHistory()
 }
 
 @Composable
@@ -184,4 +189,114 @@ private fun MiniBtn(t: String, onClick: () -> Unit) {
     val p = pal()
     Box(Modifier.padding(start = 6.dp).size(36.dp).clip(RoundedCornerShape(18.dp)).border(1.dp, p.line, RoundedCornerShape(18.dp)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center) { Text(t, style = T.bodyB, color = p.ink) }
+}
+
+
+/* ---------------- history you can fix ---------------- */
+
+@Composable
+private fun HistoryTitle(t: String, sub: String? = null) {
+    val p = pal()
+    Column(Modifier.padding(top = 6.dp)) {
+        Text(t, style = T.bodyB, color = p.ink)
+        if (sub != null) Text(sub, style = T.small, color = p.muted)
+    }
+}
+
+private fun dayLabel(d: java.time.LocalDate): String {
+    val t = com.phani.widgets.core.today()
+    return when (d) { t -> "Today"; t.minusDays(1) -> "Yesterday"; else -> "${Fmt.dowName(d.dayOfWeek.value % 7)}, ${Fmt.short(d)}" }
+}
+
+/** This month's spending, newest first, each removable. */
+@Composable
+internal fun SpendHistory() {
+    AppStore.rev
+    val p = pal()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val d = AppStore.data
+    val l = d.log.sortedByDescending { it.date }.take(12)
+    HistoryTitle("Recent spending", if (l.isEmpty()) "Nothing logged yet." else "Logged by mistake? Tap × to remove it.")
+    if (l.isNotEmpty()) ListCard {
+        l.forEachIndexed { i, sp ->
+            ListRow(Fmt.money(sp.amt), "${sp.note.ifBlank { "Spending" }} · ${dayLabel(java.time.LocalDate.parse(sp.date))}", divider = i < l.size - 1,
+                trailing = { Icon(Ic.x, "Remove", tint = p.muted, modifier = Modifier.size(18.dp)) }) {
+                AppStore.change(true) { log.remove(sp) }; Toaster.show("Removed ${Fmt.money(sp.amt)}", true)
+            }
+        }
+    }
+    BigButton("Add spending", kind = "ghost", icon = Ic.plus) { ctx.startActivity(com.phani.widgets.QuickActivity.intent(ctx, "spend", null, null)) }
+}
+
+/** The last 7 days, each with − and +, so a wrong count can be fixed. */
+@Composable
+internal fun CounterHistory(ct: com.phani.widgets.core.Counter) {
+    AppStore.rev
+    val p = pal()
+    HistoryTitle("Last 7 days", "Tapped by mistake? Fix any day here.")
+    ListCard {
+        (0L..6L).forEach { back ->
+            val day = com.phani.widgets.core.today().minusDays(back)
+            val k = day.toString()
+            val v = ct.log[k] ?: 0
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(dayLabel(day), style = T.body, color = p.ink, modifier = Modifier.weight(1f))
+                MiniBtn("−") { if (v > 0) AppStore.change { ct.log[k] = v - 1 } }
+                Text("$v", style = T.bodyB, color = if (v >= ct.goal) Signal else p.ink, modifier = Modifier.width(44.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                MiniBtn("+") { AppStore.change { ct.log[k] = v + 1 } }
+            }
+        }
+    }
+}
+
+/** Four weeks of days: tap any day to mark it done or not. */
+@Composable
+internal fun HabitCalendar(h: com.phani.widgets.core.Habit) {
+    AppStore.rev
+    val p = pal()
+    val t = com.phani.widgets.core.today()
+    val start = t.minusDays(27L + (t.dayOfWeek.value - 1)) // Monday, 4 weeks back
+    HistoryTitle("Your days", "Tap a day to tick or untick it. Forgot yesterday? Tick it here.")
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row { listOf("M", "T", "W", "T", "F", "S", "S").forEach { Text(it, style = T.small, color = p.muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.weight(1f)) } }
+        val days = generateSequence(start) { it.plusDays(1) }.takeWhile { !it.isAfter(t.plusDays((7 - t.dayOfWeek.value).toLong())) }.toList()
+        days.chunked(7).forEach { week ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                week.forEach { day ->
+                    val k = day.toString()
+                    val future = day.isAfter(t)
+                    val on = k in h.done
+                    Box(Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(10.dp))
+                        .background(if (on) (if (day == t) Signal else p.ink) else if (future) Color.Transparent else p.soft)
+                        .then(if (day == t && !on) Modifier.border(2.dp, Signal, RoundedCornerShape(10.dp)) else Modifier)
+                        .clickable(enabled = !future) {
+                            AppStore.change { if (on) h.done.remove(k) else { h.done.add(k); h.frozen.remove(k); val n = com.phani.widgets.core.streak(h).n; if (n > h.record) h.record = n } }
+                        }, contentAlignment = Alignment.Center) {
+                        Text("${day.dayOfMonth}", style = T.smallB, color = if (on) p.paper else if (future) p.muted.copy(alpha = 0.4f) else p.ink)
+                    }
+                }
+            }
+        }
+    }
+    Text("${com.phani.widgets.core.streak(h).n}-day streak · best ${maxOf(h.record, com.phani.widgets.core.streak(h).n)}", style = T.small, color = p.muted)
+}
+
+/** Past fasts with how long they lasted, each removable. */
+@Composable
+internal fun FastHistory() {
+    AppStore.rev
+    val p = pal()
+    val l = AppStore.data.fast.history.sortedByDescending { it.start }.take(8)
+    if (l.isEmpty()) return
+    HistoryTitle("Past fasts", "A fast you didn't mean to log? Tap × to remove it.")
+    ListCard {
+        l.forEachIndexed { i, r ->
+            val h = (r.end - r.start) / 3_600_000.0
+            val d = java.time.Instant.ofEpochMilli(r.start).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            ListRow(Fmt.hhmm(h) + " h", dayLabel(d), divider = i < l.size - 1,
+                trailing = { Icon(Ic.x, "Remove", tint = p.muted, modifier = Modifier.size(18.dp)) }) {
+                AppStore.change(true) { fast.history.remove(r) }; Toaster.show("Fast removed", true)
+            }
+        }
+    }
 }
