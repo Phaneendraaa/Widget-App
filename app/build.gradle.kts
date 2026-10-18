@@ -16,6 +16,16 @@ android {
         versionName = "0.2.0"
     }
 
+    // Fixed key so every build is signed the same and updates install over each other.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
