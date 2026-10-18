@@ -338,3 +338,116 @@ internal fun RemindersSection() {
     RemindToggle("fast", "Fast finished", "When you reach your fasting goal")
     RemindToggle("water", "Water nudges", "Every 2 hours, only if you're behind")
 }
+
+/* ---------------- stats ---------------- */
+
+/** Seven small bars with day initials: a quick picture of the last week. */
+@Composable
+private fun WeekBars(values: List<Double>, goal: Double?, fmt: (Double) -> String) {
+    val p = pal()
+    val mx = maxOf(values.maxOrNull() ?: 0.0, goal ?: 0.0, 1.0)
+    val t = com.phani.widgets.core.today()
+    Row(Modifier.fillMaxWidth().height(120.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+        values.forEachIndexed { i, v ->
+            val day = t.minusDays((values.size - 1 - i).toLong())
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(if (v > 0) fmt(v) else "", style = T.small.copy(fontSize = 10.sp), color = p.muted, maxLines = 1)
+                Box(Modifier.fillMaxWidth().height((80 * (v / mx)).coerceAtLeast(3.0).dp).clip(RoundedCornerShape(6.dp))
+                    .background(if (i == values.size - 1) Signal else if (goal != null && v >= goal) p.ink else p.soft))
+                Text(Fmt.dowName(day.dayOfWeek.value % 7).take(1), style = T.small.copy(fontSize = 11.sp), color = p.muted, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatRow(items: List<Pair<String, String>>) {
+    val p = pal()
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        items.forEach { (v, l) ->
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(p.paper).padding(12.dp)) {
+                Text(v, style = T.h3.copy(fontSize = 19.sp), color = p.ink, maxLines = 1)
+                Text(l, style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 2)
+            }
+        }
+    }
+}
+
+/** How it's going, for widgets that keep a history. */
+@Composable
+internal fun StatsCard(c: com.phani.widgets.core.WConf) {
+    AppStore.rev
+    val p = pal()
+    val d = AppStore.data
+    val t = com.phani.widgets.core.today()
+    val days7 = (6L downTo 0L).map { t.minusDays(it).toString() }
+    val has = when (c.type) {
+        "spend" -> d.log.isNotEmpty()
+        "counter" -> d.counters.firstOrNull { it.id == c.ref }?.log?.isNotEmpty() == true
+        "streak" -> d.habits.firstOrNull { it.id == c.ref }?.done?.isNotEmpty() == true
+        "fast" -> d.fast.history.isNotEmpty()
+        else -> false
+    }
+    if (!has) return
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("How it's going", style = T.bodyB, color = p.ink)
+        when (c.type) {
+            "spend" -> SpendStats(days7)
+            "counter" -> d.counters.firstOrNull { it.id == c.ref }?.let { CounterStats(it, days7) }
+            "streak" -> d.habits.firstOrNull { it.id == c.ref }?.let { HabitStats(it) }
+            "fast" -> FastStats(days7)
+        }
+    }
+}
+
+@Composable
+private fun SpendStats(days7: List<String>) {
+    val p = pal()
+    val d = AppStore.data
+    val t = com.phani.widgets.core.today()
+    val s = com.phani.widgets.core.spendState()
+    val (st, _) = com.phani.widgets.core.budgetPeriod()
+    val inPeriod = d.log.filter { !java.time.LocalDate.parse(it.date).isBefore(st) }
+    val gone = maxOf(1, java.time.temporal.ChronoUnit.DAYS.between(st, t).toInt() + 1)
+    StatRow(listOf(Fmt.money(s.spent, 0) to "spent so far", Fmt.money(s.spent / gone, 0) to "a day on average", Fmt.money(maxOf(0.0, s.periodLeft), 0) to "left in total"))
+    WeekBars(days7.map { k -> d.log.filter { it.date == k }.sumOf { it.amt } }, s.per) { Fmt.money(it, 0) }
+    val cats = inPeriod.groupBy { it.note.ifBlank { "Other" } }.mapValues { e -> e.value.sumOf { it.amt } }.entries.sortedByDescending { it.value }.take(5)
+    if (cats.size > 1) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        val top = cats.first().value
+        cats.forEach { (k, v) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(k, style = T.small, color = p.ink, modifier = Modifier.width(90.dp), maxLines = 1)
+                Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(p.soft)) {
+                    Box(Modifier.fillMaxWidth((v / top).toFloat()).height(8.dp).clip(RoundedCornerShape(4.dp)).background(p.ink))
+                }
+                Text(Fmt.money(v, 0), style = T.smallB, color = p.ink, modifier = Modifier.width(70.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CounterStats(ct: com.phani.widgets.core.Counter, days7: List<String>) {
+    val vals = days7.map { (ct.log[it] ?: 0).toDouble() }
+    val met = vals.count { it >= ct.goal }
+    StatRow(listOf(Fmt.trimNum((vals.sum() / 7 * 10).toInt() / 10.0) to "a day on average", "$met of 7" to "days goal met", "${ct.log.values.maxOrNull() ?: 0}" to "best day"))
+    WeekBars(vals, ct.goal.toDouble()) { it.toInt().toString() }
+}
+
+@Composable
+private fun HabitStats(h: com.phani.widgets.core.Habit) {
+    val t = com.phani.widgets.core.today()
+    val last30 = (0L until 30L).count { t.minusDays(it).toString() in h.done }
+    val st = com.phani.widgets.core.streak(h)
+    StatRow(listOf("${st.n}" to "day streak", "${maxOf(h.record, st.n)}" to "best streak", "${last30 * 100 / 30}%" to "of the last 30 days"))
+}
+
+@Composable
+private fun FastStats(days7: List<String>) {
+    val d = AppStore.data
+    val hs = d.fast.history
+    val hrs = hs.map { (it.end - it.start) / 3_600_000.0 }
+    val recent = hrs.takeLast(10)
+    StatRow(listOf(Fmt.hhmm(recent.average()) to "average (last ${recent.size})", Fmt.hhmm(hrs.max()) to "longest", "${hrs.count { it >= d.fast.target }}" to "reached the goal"))
+    WeekBars(days7.map { k -> hs.filter { java.time.Instant.ofEpochMilli(it.end).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString() == k }.sumOf { (it.end - it.start) / 3_600_000.0 } }, d.fast.target.toDouble()) { "${it.toInt()}h" }
+}

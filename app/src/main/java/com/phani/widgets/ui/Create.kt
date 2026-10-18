@@ -344,6 +344,7 @@ private fun infoSub(c: WConf): String? = when (c.type) {
 private fun InfoFields(c: WConf) {
     AppStore.rev
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (Create.editing) StatsCard(c)
         when (c.type) {
             "countdown" -> CountdownInfo(c)
             "streak" -> StreakInfo(c)

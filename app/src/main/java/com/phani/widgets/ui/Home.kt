@@ -103,6 +103,7 @@ fun GalleryScreen() {
         }
     }
     SearchBar()
+    if (Gallery.query.isBlank() && Gallery.size == null && Gallery.cat == "all") Packs()
     // category tabs: the row slides along by itself so the next tabs come into view
     val cats = listOf("all" to "All") + Catalog.visible.map { it.type to it.name }
     val tabState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -252,6 +253,69 @@ fun BottomTabs() {
                 Icon(ic, null, tint = if (on) p.paper else p.muted, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted)
+            }
+        }
+    }
+}
+
+
+/* ---------------- starter packs ---------------- */
+
+private class Pack(val name: String, val what: String, val make: com.phani.widgets.core.AppData.() -> List<WConf>)
+
+private val PACKS = listOf(
+    Pack("Fitness", "Workout streak, water, fasting") {
+        val h = com.phani.widgets.core.uid(); val c = com.phani.widgets.core.uid()
+        habits.add(com.phani.widgets.core.Habit(h, "Workout", 0, 1, mutableSetOf(), mutableSetOf()))
+        counters.add(com.phani.widgets.core.Counter(c, "Water", "glasses", 8, mutableMapOf()))
+        listOf(WConf(com.phani.widgets.core.uid(), "streak", "big", "s", "ink", ref = h),
+            WConf(com.phani.widgets.core.uid(), "counter", "glass", "s", accent = "cobalt", ref = c),
+            WConf(com.phani.widgets.core.uid(), "fast", "timer", "w"))
+    },
+    Pack("Study", "Exam countdown, classes, next up") {
+        val e = com.phani.widgets.core.uid()
+        dates.add(com.phani.widgets.core.DateItem(e, "Exams", com.phani.widgets.core.today().plusDays(30).toString(), false))
+        listOf(WConf(com.phani.widgets.core.uid(), "countdown", "big", "s", accent = "lilac", ref = e),
+            WConf(com.phani.widgets.core.uid(), "attendance", "single", "s"),
+            WConf(com.phani.widgets.core.uid(), "next", "card", "w", "ink"))
+    },
+    Pack("Money", "Safe to spend, renewals, savings") {
+        val g = com.phani.widgets.core.uid()
+        goals.add(com.phani.widgets.core.Goal(g, "Savings", cur, 1000.0, 0.0, com.phani.widgets.core.today().toString(), com.phani.widgets.core.today().plusDays(180).toString(), 50.0))
+        listOf(WConf(com.phani.widgets.core.uid(), "spend", "ring", "s", accent = "mint"),
+            WConf(com.phani.widgets.core.uid(), "subs", "next", "s", "ink", "sun"),
+            WConf(com.phani.widgets.core.uid(), "pace", "bar", "w", ref = g))
+    },
+    Pack("Everyday", "Date, moon, a note to self") {
+        val n = com.phani.widgets.core.uid()
+        notes.add(com.phani.widgets.core.Note(n, "Be kind. Drink water. Go outside."))
+        listOf(WConf(com.phani.widgets.core.uid(), "today", "day", "s", "you"),
+            WConf(com.phani.widgets.core.uid(), "moon", "moon", "s", "ink"),
+            WConf(com.phani.widgets.core.uid(), "note", "banner", "w", ref = n))
+    },
+)
+
+/** One tap sets up three matching widgets; each can then be filled in and added to the home screen. */
+@Composable
+private fun Packs() {
+    val p = pal()
+    Text("Quick start", style = T.smallB, color = p.muted, modifier = Modifier.padding(bottom = 8.dp))
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        PACKS.forEach { pk ->
+            Column(Modifier.width(168.dp).clip(RoundedCornerShape(20.dp)).background(p.card).clickable {
+                var made = emptyList<WConf>()
+                AppStore.change(true) { made = pk.make(this); placed.addAll(0, made) }
+                Nav.screen = "mine"
+                Toaster.show("${pk.name}: ${made.size} widgets added. Tap one to fill it in, then Add.", true)
+            }.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(pk.name, style = T.bodyB.copy(fontSize = 16.sp), color = p.ink)
+                Text(pk.what, style = T.small, color = p.muted, maxLines = 2, minLines = 2)
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Ic.plus, null, tint = p.ink, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add 3 widgets", style = T.smallB, color = p.ink)
+                }
             }
         }
     }
