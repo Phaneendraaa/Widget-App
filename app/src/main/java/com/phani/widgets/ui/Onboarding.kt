@@ -45,7 +45,7 @@ import com.phani.widgets.core.Catalog
 import com.phani.widgets.core.WConf
 
 private fun mk(type: String, design: String, style: String, accent: String, font: String = "grotesk") =
-    WConf("ob$type$design", type, design, Catalog.design(type, design).size, style, accent, font, ref = Catalog.defaultRef(type))
+    WConf("ob$type$design", type, design, Catalog.design(type, design).size, style, accent, font)
 
 @Composable
 private fun Headline(plain: String, italic: String) {
@@ -65,84 +65,28 @@ private fun Sub(t: String) = Text(t, style = T.body.copy(fontSize = 16.sp, lineH
 @Composable
 private fun Pair2(a: WConf, b: WConf) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.weight(1f)) { WidgetView(a, live = false) }
-        Box(Modifier.weight(1f)) { WidgetView(b, live = false) }
+        Box(Modifier.weight(1f)) { WidgetView(a, live = false, sample = true) }
+        Box(Modifier.weight(1f)) { WidgetView(b, live = false, sample = true) }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Onboarding() {
     val p = pal()
-    var step by remember { mutableIntStateOf(0) }
-    var picks by remember { mutableStateOf(setOf("money", "habits")) }
-    val finish = {
-        val first = listOf("money" to "money", "subs" to "subs", "habits" to "habits", "health" to "fast", "time" to "dates", "work" to "sched", "student" to "classes")
-            .firstOrNull { it.first in picks }?.second
-        if (first != null) TrackState.tab = first
-        AppStore.change { onboarded = true }
-    }
     Column(
         Modifier.fillMaxSize().background(p.paper).windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 20.dp),
     ) {
-        Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.End) {
-            if (step < 2) Text("Skip", style = T.bodyB, color = p.ink, modifier = Modifier.clickable { AppStore.change { onboarded = true } }.padding(10.dp))
-        }
-        when (step) {
-            0 -> {
-                Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Pair2(mk("spend", "ring", "ink", "mint"), mk("fast", "ring", "paper", "signal"))
-                    Pair2(mk("streak", "big", "paper", "signal", "serif"), mk("subs", "next", "ink", "sun", "mono"))
-                }
-                Spacer(Modifier.height(16.dp))
-                Headline("Widgets that ", "answer.")
-                Sub("Not just a clock and a date. What you can spend today, when the next charge hits, whether your streak is safe.")
-            }
-            1 -> {
-                Spacer(Modifier.height(40.dp))
-                Headline("What do you want at a ", "glance?")
-                Sub("Pick any. You can add the rest later.")
-                FlowRow(Modifier.padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    listOf("money" to "Spending", "subs" to "Subscriptions", "habits" to "Habits", "health" to "Fasting & water",
-                        "time" to "Countdowns", "work" to "My schedule", "student" to "Class attendance").forEach { (k, l) ->
-                        val on = k in picks
-                        Box(Modifier.height(48.dp).clip(RoundedCornerShape(24.dp)).background(if (on) p.ink else p.card)
-                            .then(if (on) Modifier else Modifier.border(1.dp, p.line, RoundedCornerShape(24.dp)))
-                            .clickable { picks = if (on) picks - k else picks + k }.padding(horizontal = 18.dp),
-                            contentAlignment = androidx.compose.ui.Alignment.Center) {
-                            Text(l, style = T.bodyB, color = if (on) p.paper else p.ink)
-                        }
-                    }
-                }
-                Spacer(Modifier.height(80.dp))
-            }
-            else -> {
-                Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    WidgetView(mk("now", "card", "ink", "signal"), live = false)
-                    Pair2(mk("countdown", "big", "paper", "cobalt", "serif"), mk("counter", "glass", "paper", "cobalt"))
-                }
-                Spacer(Modifier.height(16.dp))
-                Headline("Make every one ", "yours.")
-                Sub("${Catalog.totalDesigns} designs. Any colour, any corner, your own title. Everything included, no in-app purchases.")
-            }
-        }
         Spacer(Modifier.height(24.dp))
-        Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, androidx.compose.ui.Alignment.CenterHorizontally)) {
-            (0..2).forEach { i -> Box(Modifier.height(6.dp).width(if (i == step) 20.dp else 6.dp).clip(RoundedCornerShape(3.dp)).background(if (i == step) p.ink else p.soft)) }
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Pair2(mk("countdown", "big", "paper", "cobalt", "serif"), mk("streak", "big", "ink", "signal"))
+            WidgetView(mk("spend", "strip", "paper", "mint"), live = false, sample = true)
         }
-        if (step < 2) BigButton("Continue") { step++ }
-        else {
-            BigButton("Start with my own info") {
-                AppStore.change {
-                    subs.clear(); habits.clear(); goals.clear(); dates.clear(); subjects.clear(); counters.clear(); placed.clear(); sched.clear(); log.clear()
-                    fast.start = null; fast.history.clear(); sampleData = false
-                }
-                finish(); Nav.tab = "home"
-            }
-            Spacer(Modifier.height(10.dp))
-            BigButton("Look around with examples first", kind = "ghost") { finish() }
-        }
+        Spacer(Modifier.height(28.dp))
+        Headline("Widgets that ", "answer.")
+        Sub("Days until your trip. Whether your streak is safe. What you can spend today. Right on your home screen.")
+        Spacer(Modifier.height(32.dp))
+        BigButton("Get started") { AppStore.change { onboarded = true } }
     }
 }
 
@@ -154,9 +98,10 @@ fun HelpSheet(close: () -> Unit) {
         ListCard {
             ListRow("1. Long-press an empty spot on your home screen")
             ListRow("2. Tap Widgets and find Widget App")
-            ListRow("3. Pick Small, Wide or Large and drag it out", divider = false)
+            ListRow("3. Pick Small, Wide or Large and drag it out")
+            ListRow("4. Pick one of your widgets from the list", divider = false)
         }
-        Text("Or tap Edit on Home, then + on any widget.", style = T.small, color = p.muted)
+        Text("Or make a widget in the app and tap Add to home screen.", style = T.small, color = p.muted)
         Text("Keep them up to date", style = T.bodyB, color = p.ink, modifier = Modifier.padding(top = 6.dp))
         Text("Taps update widgets instantly. Clocks and timers refresh about every 15 minutes. Some phones pause apps to save battery; if a widget looks behind, allow Widget App to run in the background:", style = T.small, color = p.muted)
         ListCard {

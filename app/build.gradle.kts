@@ -12,8 +12,8 @@ android {
         applicationId = "com.phani.widgets"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.0.0"
+        versionCode = 16
+        versionName = "1.1.0"
     }
 
     // Fixed key so every build is signed the same and updates install over each other.
@@ -61,4 +61,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.13")
     testImplementation("androidx.test:core:1.6.1")
+    testImplementation(platform("androidx.compose:compose-bom:2024.10.01"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

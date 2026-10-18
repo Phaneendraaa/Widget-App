@@ -34,6 +34,8 @@ object Ic {
     val x = make("x", 2.2f, false, "M6 6l12 12", "M18 6L6 18")
     val up = make("up", 2.2f, false, "M6 14l6-6 6 6")
     val chev = make("chev", 2f, false, "M9 6l6 6-6 6")
+    val back = make("back", 2f, false, "M15 6l-6 6 6 6")
+    val trash = make("trash", 1.8f, false, "M5 7h14", "M10 11v6", "M14 11v6", "M7 7l1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12", "M9.5 7V5h5v2")
     val brush = make("brush", 1.9f, false, "M14 4l6 6-8.5 8.5a3 3 0 0 1-2.1.9H5v-4.4a3 3 0 0 1 .9-2.1z", "M12 6l6 6")
     val snow = make("snow", 1.8f, false, "M12 3v18", "M4.2 7.5l15.6 9", "M4.2 16.5l15.6-9")
     val lock = make("lock", 2f, false, "M7.5 11h9a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 17.5v-4A2.5 2.5 0 0 1 7.5 11z", "M8 11V8a4 4 0 0 1 8 0v3")

@@ -693,7 +693,7 @@ private fun ClearSheet(close: () -> Unit) {
                 subs.clear(); habits.clear(); goals.clear(); dates.clear(); subjects.clear(); clocks.clear(); counters.clear()
                 placed.clear(); sched.clear(); log.clear(); sampleData = false; fast.start = null; fast.history.clear()
             }
-            close(); Nav.tab = "home"; Toaster.show("Cleared. Tap New to make your first widget.", true)
+            close(); Nav.screen = "home"; Toaster.show("Cleared. Tap New to make your first widget.", true)
         }
         BigButton("Keep the examples", kind = "ghost", onClick = close)
     }

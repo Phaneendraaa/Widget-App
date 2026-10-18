@@ -64,8 +64,9 @@ abstract class BaseWidget : AppWidgetProvider() {
                 Widgets.prepare(context)
                 val act = intent.getStringExtra("act") ?: return
                 if (act == "open" || act == "spend-open") {
-                    context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        .putExtra("open", act))
+                    context.startActivity(Intent(context, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        .putExtra("open", act).putExtra("cid", intent.getStringExtra("cid")))
                     return
                 }
                 Actions.run(act, intent.getStringExtra("id"), intent.getStringExtra("value"))
@@ -107,6 +108,31 @@ object Widgets {
         }
     }
 
+    /** Widget ids that really exist on the home screen right now. */
+    fun liveIds(ctx: Context): Set<Int> {
+        val m = AppWidgetManager.getInstance(ctx)
+        return providers.flatMap { m.getAppWidgetIds(ComponentName(ctx, it.first)).toList() }.toSet()
+    }
+
+    /** Forget home-screen widgets the user removed while the app wasn't listening. */
+    fun prune(ctx: Context) {
+        val live = liveIds(ctx)
+        if (AppStore.data.bound.keys.any { it !in live }) AppStore.change { bound.keys.retainAll(live) }
+    }
+
+    /** True when this saved widget is on the home screen. */
+    fun isOnPhone(id: String): Boolean = AppStore.data.bound.values.any { it.id == id }
+
+    /**
+     * The look a home-screen widget shows: the latest version of the widget saved in the app,
+     * so edits in the app show up on the phone straight away.
+     */
+    fun confFor(id: Int, size: String): WConf? {
+        val b = AppStore.data.bound[id] ?: return null
+        val latest = AppStore.data.placed.firstOrNull { it.id == b.id } ?: return b
+        return if (latest.size == size) latest else latest.copy(design = b.design, size = size)
+    }
+
     fun placedCount(ctx: Context): Int {
         val m = AppWidgetManager.getInstance(ctx)
         return providers.sumOf { m.getAppWidgetIds(ComponentName(ctx, it.first)).size }
@@ -123,7 +149,7 @@ object Widgets {
     }
 
     fun render(ctx: Context, m: AppWidgetManager, id: Int, size: String) {
-        val conf = AppStore.data.bound[id]
+        val conf = confFor(id, size)
         val rv = RemoteViews(ctx.packageName, R.layout.widget_host)
         val density = ctx.resources.displayMetrics.density
         val (wDp, hDp) = sizeDp(m, id, size)
@@ -160,7 +186,7 @@ object Widgets {
         for (i in CELLS.indices) {
             val h = assigned[i]
             val intent = Intent(ctx, providerFor(size)).setAction(ACT_TAP)
-                .putExtra("act", h?.act ?: "open").putExtra("id", h?.id).putExtra("value", h?.value)
+                .putExtra("act", h?.act ?: "open").putExtra("id", h?.id).putExtra("value", h?.value).putExtra("cid", conf.id)
             val pi = PendingIntent.getBroadcast(ctx, id * 100 + i, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             rv.setOnClickPendingIntent(CELLS[i], pi)
         }
@@ -174,8 +200,8 @@ object Widgets {
         val x = Ctx(c, w.toFloat(), h.toFloat(), density, pal, conf)
         x.rrect(0f, 0f, x.W, x.H, 26f, x.fill(pal.bg))
         x.label("Widget App", x.pad, x.pad + 11.5f)
-        x.text("Tap to choose", x.pad, x.H - x.pad - 20f, 17f, x.uiFace(600), pal.fg)
-        x.small("a widget and its look", x.pad, x.H - x.pad - 2f)
+        x.text("Tap to set up", x.pad, x.H - x.pad - 20f, 17f, x.uiFace(600), pal.fg)
+        x.small("Pick one of your widgets", x.pad, x.H - x.pad - 2f)
         return bmp
     }
 
@@ -187,7 +213,7 @@ object Widgets {
     fun requestPin(ctx: Context, conf: WConf): Boolean {
         val m = AppWidgetManager.getInstance(ctx)
         if (!m.isRequestPinAppWidgetSupported) return false
-        prefs(ctx).edit().putString("pending", conf.copy(id = uid()).toJson().toString())
+        prefs(ctx).edit().putString("pending", conf.toJson().toString())
             .putLong("pendingAt", System.currentTimeMillis()).apply()
         val cb = Intent(ctx, providerFor(conf.size)).setAction(ACT_PINNED)
         val pi = PendingIntent.getBroadcast(ctx, 7, cb, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)

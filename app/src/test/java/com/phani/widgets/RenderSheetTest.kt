@@ -40,7 +40,7 @@ class RenderSheetTest {
         val colW = (330 * k).toInt()
         val cells = items.map { c ->
             val (w, h) = sizes.getValue(c.size)
-            renderWidget(c, (w * k).toInt(), (h * k).toInt(), k).bitmap to "${c.type}/${c.design}"
+            renderWidget(c, (w * k).toInt(), (h * k).toInt(), k, sample = true).bitmap to "${c.type}/${c.design}"
         }
         val cols = 3
         val rowsH = cells.chunked(cols).map { r -> r.maxOf { it.first.height } + (24 * k).toInt() + gap }

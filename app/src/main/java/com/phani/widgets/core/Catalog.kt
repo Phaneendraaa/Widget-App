@@ -40,8 +40,16 @@ object Catalog {
     fun design(t: String, d: String) = type(t).designs.firstOrNull { it.id == d } ?: type(t).designs[0]
     val totalDesigns get() = types.sumOf { it.designs.size }
 
-    fun defaultRef(t: String): String? {
-        val d = AppStore.data
+    /** The widgets offered in this version, in the order they're shown. The rest stay in code for later updates. */
+    val launch = listOf("countdown", "streak", "spend", "subs", "counter", "clock")
+    val visible get() = launch.map { type(it) }
+
+    val sizeName = mapOf("s" to "Small", "w" to "Wide", "m" to "Large")
+    val sizeGrid = mapOf("s" to "2×2", "w" to "4×1", "m" to "4×2")
+
+    fun defaultRef(t: String): String? = defaultRefIn(t, AppStore.data)
+
+    fun defaultRefIn(t: String, d: AppData): String? {
         return when (t) {
             "countdown" -> d.dates.firstOrNull()?.id
             "pace" -> d.goals.firstOrNull()?.id

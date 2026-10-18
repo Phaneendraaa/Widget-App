@@ -15,6 +15,7 @@ import android.text.TextPaint
 import android.text.TextUtils
 import androidx.core.graphics.PathParser
 import com.phani.widgets.core.AppStore
+import com.phani.widgets.core.Catalog
 import com.phani.widgets.core.WConf
 import kotlin.math.max
 import kotlin.math.min
@@ -250,7 +251,13 @@ fun preferredHeight(conf: WConf, widthDp: Float): Float = when (conf.size) {
 }
 
 /** Render a widget to a bitmap with its tap areas. Width/height in pixels. */
-fun renderWidget(conf: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
+fun renderWidget(conf: WConf, wPx: Int, hPx: Int, density: Float, sample: Boolean = false): Rendered {
+    if (!sample) return draw(conf, wPx, hPx, density)
+    AppStore.previewing = true
+    try { return draw(conf.copy(ref = Catalog.defaultRefIn(conf.type, AppStore.sample)), wPx, hPx, density) } finally { AppStore.previewing = false }
+}
+
+private fun draw(conf: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
     val (wbg, wfg) = wallColors()
     val bmp = Bitmap.createBitmap(max(1, wPx), max(1, hPx), Bitmap.Config.ARGB_8888)
     val c = Canvas(bmp)

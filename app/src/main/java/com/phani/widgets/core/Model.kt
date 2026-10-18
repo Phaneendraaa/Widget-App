@@ -88,7 +88,7 @@ fun wconf(o: JSONObject) = WConf(
 
 fun AppData.toJson(): JSONObject {
     val o = JSONObject()
-    o.put("v", 5).put("pro", pro).put("onboarded", onboarded).put("sampleData", sampleData).put("wall", wall)
+    o.put("v", 6).put("pro", pro).put("onboarded", onboarded).put("sampleData", sampleData).put("wall", wall)
         .put("cur", cur).put("h24", h24).put("dmy", dmy).put("req", req).put("theme", theme)
         .put("budget", budget).put("payday", payday)
     o.put("log", JSONArray(log.map { JSONObject().put("id", it.id).put("amt", it.amt).put("date", it.date).put("note", it.note) }))
@@ -162,6 +162,15 @@ fun appDataFrom(o: JSONObject): AppData {
         howSeen = o.optBoolean("howSeen", false),
     )
 }
+
+/** A fresh start: nothing tracked, no widgets. */
+fun emptyData(cur: String): AppData = AppData(
+    pro = true, onboarded = false, sampleData = false, wall = "stone", cur = cur, h24 = false,
+    dmy = cur !in listOf("USD", "CAD"), req = 75, theme = "auto", budget = 0.0, payday = 1,
+    log = mutableListOf(), subs = mutableListOf(), habits = mutableListOf(), goals = mutableListOf(), dates = mutableListOf(),
+    fast = Fast(null, 16, mutableListOf()), counters = mutableListOf(), clocks = mutableListOf(), subjects = mutableListOf(),
+    sched = mutableMapOf(), placed = mutableListOf(), bound = mutableMapOf(),
+)
 
 /* ---------------- sample data ---------------- */
 

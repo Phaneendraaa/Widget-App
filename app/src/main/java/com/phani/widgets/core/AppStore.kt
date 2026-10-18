@@ -23,12 +23,26 @@ object AppStore {
         val f = File(ctx.applicationContext.filesDir, "widgetapp.json")
         file = f
         data = try {
-            if (f.exists()) appDataFrom(JSONObject(f.readText())) else sampleData(guessCurrency())
+            if (f.exists()) {
+                val o = JSONObject(f.readText())
+                val d = appDataFrom(o)
+                // v6 starts everyone clean: earlier builds filled the app with example data.
+                if (o.optInt("v", 5) < 6 && d.sampleData) emptyData(d.cur).also { it.theme = d.theme; it.h24 = d.h24; it.dmy = d.dmy } else d
+            } else emptyData(guessCurrency())
         } catch (e: Exception) {
-            sampleData(guessCurrency())
+            emptyData(guessCurrency())
         }
         loaded = true
+        save()
     }
+
+    /** Example data, used only to draw previews (gallery, design picker, onboarding). Never saved. */
+    private var sampleCache: AppData? = null
+    val sample: AppData get() = sampleCache?.takeIf { it.cur == data.cur } ?: sampleData(data.cur).also { sampleCache = it }
+
+    /** What widget renderers read: the example data while drawing a preview, otherwise the user's own. */
+    var previewing = false
+    val view: AppData get() = if (previewing) sample else data
 
     fun save() {
         try { file?.writeText(data.toJson().toString()) } catch (_: Exception) {}

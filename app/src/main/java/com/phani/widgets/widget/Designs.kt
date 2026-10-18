@@ -35,7 +35,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-private val D get() = AppStore.data
+private val D get() = AppStore.view
 private val L = Paint.Align.LEFT
 private val R = Paint.Align.RIGHT
 private val C = Paint.Align.CENTER

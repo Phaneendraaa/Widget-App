@@ -43,6 +43,9 @@ import com.phani.widgets.ui.TopBar
 import com.phani.widgets.ui.WidgetView
 import com.phani.widgets.ui.pal
 import com.phani.widgets.ui.wall
+import com.phani.widgets.ui.Preview
+import com.phani.widgets.ui.widgetName
+import com.phani.widgets.ui.BigButton
 import com.phani.widgets.widget.LargeWidget
 import com.phani.widgets.widget.WideWidget
 import com.phani.widgets.widget.Widgets
@@ -68,31 +71,40 @@ class WidgetConfigActivity : ComponentActivity() {
         // Placed from the app with a chosen design: bind it straight away.
         val pending = Widgets.takePending(this)
         if (pending != null && pending.size == size) { done(id, pending); return }
+        // already linked (the add popup's callback got here first)
+        AppStore.data.bound[id]?.let { done(id, it); return }
 
-        val choices = Catalog.types.flatMap { t -> t.designs.filter { it.size == size }.map { d -> t to d } }
         setContent {
             val mode = AppStore.data.theme
             val dark = when (mode) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
             AppTheme(dark) {
+                AppStore.rev
                 val p = pal()
-                Column(Modifier.fillMaxSize().background(p.paper).windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState()).padding(horizontal = Pad).padding(bottom = 24.dp)) {
-                    TopBar("Choose a widget", "${choices.size} designs fit this size. You can restyle it later in the app.")
-                    val (wbg, _) = wall()
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        choices.forEach { (t, d) ->
-                            val conf = Catalog.newConf(t.type, d)
-                            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).clickable { pick(id, conf) }.padding(10.dp)) {
-                                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(wbg).padding(12.dp), contentAlignment = Alignment.Center) {
-                                    WidgetView(conf, Modifier.widthIn(max = if (size == "s") 168.dp else 340.dp), live = false, onTap = { pick(id, conf) })
-                                }
-                                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 8.dp)) {
-                                    Text(t.name, style = T.bodyB, color = p.ink, modifier = Modifier.weight(1f))
-                                    Text(d.name, style = T.small, color = p.muted)
-                                }
+                val mine = AppStore.data.placed
+                val fits = mine.filter { it.size == size }
+                // made for another size: offer the same widget in a design that fits here
+                val others = mine.filter { it.size != size }.mapNotNull { c ->
+                    Catalog.type(c.type).designs.firstOrNull { it.size == size }?.let { d -> c.copy(design = d.id, size = size) }
+                }
+                Column(Modifier.fillMaxSize().background(p.paper).windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState()).padding(horizontal = Pad).padding(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    TopBar("Which widget is this?", if (mine.isEmpty()) "You haven't made one yet. Make one now and it appears here." else "Pick one you made. It stays in sync with the app.")
+                    (fits + others).forEach { c ->
+                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).clickable { done(id, c) }.padding(10.dp)) {
+                            Preview(c)
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(widgetName(c), style = T.bodyB, color = p.ink, modifier = Modifier.weight(1f))
+                                Text("Use this", style = T.smallB, color = p.ink)
                             }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    BigButton("Make a new one", kind = if (mine.isEmpty()) "solid" else "ghost") {
+                        setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+                        startActivity(Intent(this@WidgetConfigActivity, MainActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            .putExtra("bindId", id).putExtra("size", size))
+                        finish()
+                    }
                 }
             }
         }

@@ -48,73 +48,15 @@ val WALLS = linkedMapOf(
 
 fun wall() = WALLS[AppStore.data.wall] ?: WALLS.getValue("stone")
 
-object GalleryState { var cat by mutableStateOf("all") }
-
-@Composable
-fun GalleryScreen() {
-    val p = pal()
-    val d = AppStore.data
-    TopBar("New widget", "Tap one to pick its design, look and what it shows.")
-    Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        com.phani.widgets.core.Catalog.cats.forEach { (k, l) ->
-            val on = GalleryState.cat == k
-            Box(Modifier.height(38.dp).clip(RoundedCornerShape(19.dp)).background(if (on) p.ink else Color.Transparent)
-                .then(if (on) Modifier else Modifier.border(1.dp, p.line, RoundedCornerShape(19.dp))).clickable { GalleryState.cat = k }.padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted) }
-        }
-    }
-    val items = com.phani.widgets.core.Catalog.types.filter { GalleryState.cat == "all" || it.cat == GalleryState.cat }
-    if (GalleryState.cat == "all") {
-        Spacer(Modifier.height(18.dp))
-        val r = com.phani.widgets.core.rightNow()
-        Hero("ONLY IN WIDGET APP", "One widget that knows what needs you.", "Right now it would say: \u201c${r.h}\u201d.") { Sheets.customNew("now") }
-    }
-    Spacer(Modifier.height(18.dp))
-    val (wbg, _) = wall()
-    // two-column layout: small designs pair up, wide ones take the row
-    val rows = mutableListOf<List<com.phani.widgets.core.TypeDef>>()
-    var half: com.phani.widgets.core.TypeDef? = null
-    items.forEach { t ->
-        if (t.designs[0].size == "s") { if (half == null) half = t else { rows.add(listOf(half!!, t)); half = null } }
-        else rows.add(listOf(t))
-    }
-    if (half != null) rows.add(listOf(half!!))
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        rows.forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                row.forEach { t ->
-                    val dd = t.designs[0]
-                    val conf = com.phani.widgets.core.WConf("g" + t.type, t.type, dd.id, dd.size, ref = com.phani.widgets.core.Catalog.defaultRef(t.type))
-                    Column(Modifier.weight(1f).clip(CardR).background(p.card).clickable { Sheets.customNew(t.type) }.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(wbg).padding(12.dp)) {
-                            WidgetView(conf, live = false, onTap = { Sheets.customNew(t.type) })
-                        }
-                        Text(t.name, style = T.bodyB, color = p.ink, modifier = Modifier.padding(horizontal = 6.dp))
-                        Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("${t.designs.size} designs", style = T.small.copy(fontSize = 12.sp), color = p.muted, modifier = Modifier.weight(1f))
-                            if (t.isNew) Badge("NEW", true)
-                        }
-                    }
-                }
-                if (row.size == 1 && row[0].designs[0].size == "s") Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun Badge(t: String, new: Boolean) {
-    val p = pal()
-    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(if (new) Signal else p.ink).padding(horizontal = 7.dp, vertical = 3.dp)) {
-        Text(t, style = T.label.copy(fontSize = 10.sp), color = if (new) Color(0xFF1A0A02) else p.paper)
-    }
-}
-
 @Composable
 fun SettingsScreen() {
     val p = pal()
     val d = AppStore.data
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).clickable { Nav.screen = "home" }, contentAlignment = Alignment.Center) {
+            Icon(Ic.back, "Back", tint = p.ink, modifier = Modifier.size(22.dp))
+        }
+    }
     TopBar("Settings", "Works offline. Nothing leaves your phone.")
 
     SectionTitle("App appearance")
@@ -142,19 +84,12 @@ fun SettingsScreen() {
     ListCard {
         ListRow("On your home screen", if (onPhone == 0) "None yet" else "${onPhone} widget" + (if (onPhone == 1) "" else "s") + ", updated as you tap",
             trailing = { Text("$onPhone", style = T.bodyB, color = p.ink) })
-        ListRow("How to add and keep them updated", divider = false, trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) { TrackState.open("help") }
+        ListRow("How to add and keep them updated", divider = false, trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) { Sheets.help = true }
     }
 
     SectionTitle("Data")
     var confirm by remember { mutableStateOf(false) }
     ListCard {
-        ListRow("Load example data", trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) {
-            val pro = d.pro
-            val s = sampleData(d.cur); s.pro = pro; s.onboarded = true; s.theme = d.theme
-            AppStore.replace(s)
-            Toaster.show("Example data loaded")
-        }
-        ListRow("Show welcome again", trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) { AppStore.change { onboarded = false } }
         ListRow(if (confirm) "Tap again to delete everything" else "Delete all my data", titleColor = p.warn, divider = false,
             trailing = { Icon(Ic.chev, null, tint = p.muted, modifier = Modifier.size(18.dp)) }) {
             if (!confirm) { confirm = true; return@ListRow }
@@ -167,7 +102,7 @@ fun SettingsScreen() {
             Toaster.show("All data deleted", canUndo = true)
         }
     }
-    Text("Widget App · 0.9", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 22.dp))
+    Text("Widget App · 1.1", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 22.dp))
 }
 
 @Composable

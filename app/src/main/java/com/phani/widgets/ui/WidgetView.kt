@@ -26,11 +26,13 @@ import kotlinx.coroutines.delay
 /** Ticks every 30 s so clocks, timers and countdowns stay current on screen. */
 object Clock {
     var tick by androidx.compose.runtime.mutableLongStateOf(0L)
+    /** Off in screenshot tests, where an endless timer would never let the screen settle. */
+    var enabled = true
 }
 
 @Composable
 fun ClockTicker() {
-    LaunchedEffect(Unit) { while (true) { delay(30_000); Clock.tick++ } }
+    if (Clock.enabled) LaunchedEffect(Unit) { while (true) { delay(30_000); Clock.tick++ } }
 }
 
 /**
@@ -38,15 +40,15 @@ fun ClockTicker() {
  * When [live], taps on its buttons run [onHit]; otherwise [onTap] gets the whole tap.
  */
 @Composable
-fun WidgetView(conf: WConf, modifier: Modifier = Modifier, live: Boolean = true, onTap: (() -> Unit)? = null, onHit: (Hit) -> Unit = {}) {
+fun WidgetView(conf: WConf, modifier: Modifier = Modifier, live: Boolean = true, sample: Boolean = false, onTap: (() -> Unit)? = null, onHit: (Hit) -> Unit = {}) {
     val rev = AppStore.rev
     val tick = Clock.tick
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val wDp = maxWidth.value
         val hDp = preferredHeight(conf, wDp)
         val density = LocalDensity.current.density
-        val r = remember(conf, rev, tick, wDp, hDp, AppStore.data.wall) {
-            renderWidget(conf, (wDp * density).toInt(), (hDp * density).toInt(), density)
+        val r = remember(conf, rev, tick, wDp, hDp, AppStore.data.wall, sample) {
+            renderWidget(conf, (wDp * density).toInt(), (hDp * density).toInt(), density, sample)
         }
         Image(
             bitmap = r.bitmap.asImageBitmap(),

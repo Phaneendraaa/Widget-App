@@ -42,7 +42,7 @@ val CITIES = listOf(
     "Melbourne" to "Australia/Melbourne", "Auckland" to "Pacific/Auckland",
 )
 
-private val D get() = AppStore.data
+private val D get() = AppStore.view
 
 fun today(): LocalDate = LocalDate.now()
 fun pd(s: String): LocalDate = LocalDate.parse(s)
