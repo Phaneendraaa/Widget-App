@@ -197,8 +197,14 @@ object Widgets {
         }
         for (i in CELLS.indices) {
             val h = assigned[i]
-            val act = h?.act ?: "open"
-            val pi = if (act == "open" || act == "spend-open") {
+            val quick = com.phani.widgets.QuickActivity.kindFor(conf.type)
+            val act = h?.act ?: if (quick != null) "quick" else "open"
+            val qk = when (act) { "quick" -> quick; "spend-open" -> "spend"; "fast" -> "fast"; else -> null }
+            val pi = if (qk != null) {
+                // a deliberate change (any amount, start earlier, confirm end) happens in the quick panel
+                PendingIntent.getActivity(ctx, id * 100 + i, com.phani.widgets.QuickActivity.intent(ctx, qk, conf.ref, conf.id),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            } else if (act == "open") {
                 val open = Intent(ctx, MainActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     .setData(android.net.Uri.parse("widget://$id/$i")) // keeps each cell's intent distinct

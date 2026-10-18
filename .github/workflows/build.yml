@@ -36,7 +36,7 @@ jobs:
       - name: Render widget contact sheet
         continue-on-error: true
         run: |
-          gradle testDebugUnitTest --tests "com.phani.widgets.RenderSheetTest" --tests "com.phani.widgets.ScreensTest" --no-daemon 2>&1 | grep -E "FAIL|Exception|Error|at com.phani|BUILD|tests completed" | head -40
+          gradle testDebugUnitTest --tests "com.phani.widgets.RenderSheetTest" --tests "com.phani.widgets.ScreensTest" --tests "com.phani.widgets.QuickTest" --no-daemon 2>&1 | grep -E "FAIL|Exception|Error|at com.phani|BUILD|tests completed" | head -40
           ls -la app/build/sheet.png app/build/screens.png || true
           for f in app/build/test-results/testDebugUnitTest/*.xml; do
             if grep -q '<failure' "$f"; then
@@ -52,6 +52,7 @@ jobs:
           gh release delete latest --yes --cleanup-tag || true
           EXTRA=""; [ -f app/build/sheet.png ] && cp app/build/sheet.png sheet.png && EXTRA="sheet.png"
           [ -f app/build/screens.png ] && cp app/build/screens.png screens.png && EXTRA="$EXTRA screens.png"
+          [ -f app/build/quick.png ] && cp app/build/quick.png quick.png && EXTRA="$EXTRA quick.png"
           gh release create latest widget-app.apk $EXTRA \
             --title "Latest build" \
             --notes "Build from commit ${GITHUB_SHA::7}" \

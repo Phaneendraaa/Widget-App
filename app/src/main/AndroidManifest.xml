@@ -16,6 +16,14 @@
         </activity>
 
         <activity
+            android:name=".QuickActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Quick" />
+
+        <activity
             android:name=".WidgetConfigActivity"
             android:exported="true">
             <intent-filter>

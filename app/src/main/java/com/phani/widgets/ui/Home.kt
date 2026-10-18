@@ -215,7 +215,11 @@ private fun WidgetCard(c: WConf) {
     val (wbg, _) = wall()
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).clickable { Create.startEdit(c) }) {
         Box(Modifier.fillMaxWidth().background(wbg).padding(14.dp), contentAlignment = Alignment.Center) {
-            WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = true, onTap = { Create.startEdit(c) }) { runHit(it, c.id) }
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = true, onTap = { Create.startEdit(c) }) { h ->
+                if (h.act == "spend-open" || h.act == "fast") ctx.startActivity(com.phani.widgets.QuickActivity.intent(ctx, if (h.act == "fast") "fast" else "spend", c.ref, c.id))
+                else runHit(h, c.id)
+            }
         }
         Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

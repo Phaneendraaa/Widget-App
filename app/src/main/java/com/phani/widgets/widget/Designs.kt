@@ -515,7 +515,7 @@ object Designs {
                 }
             }
             "big" -> {
-                if (showLabel) label(ttl("${h.name} · $rec"), pad, pad + 11.5f, W - 2 * pad - 44f)
+                if (showLabel) label(ttl(h.name), pad, pad + 11.5f, W - 2 * pad - 44f)
                 button(W - pad - 36f, pad - 6f, 36f, 36f, if (st.today) "ghost" else "acc", "hab", h.id, ic = Paths.check)
                 val sz = clampSz(44f, 0.36f, 70f, W)
                 val base = H - pad - 26f
