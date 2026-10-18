@@ -97,6 +97,7 @@ fun SheetHost() {
     if (c != null) CustomizeSheet(c)
     val pw = Sheets.paywall
     if (pw != null) PaywallSheet(pw)
+    TrackSheetHost()
 }
 
 @Composable

@@ -54,7 +54,7 @@ object HomeState {
 
 fun runHit(hit: com.phani.widgets.widget.Hit) {
     val r = com.phani.widgets.core.Actions.run(hit.act, hit.id, hit.value)
-    if (r.openSpend) { Toaster.show("The spend keypad arrives with the Track build"); return }
+    if (r.openSpend) { TrackState.open("spend"); return }
     if (r.msg != null) Toaster.show(r.msg, r.undo)
 }
 
@@ -128,7 +128,7 @@ fun HomeScreen() {
     }
     if (d.sampleData) {
         Spacer(Modifier.height(10.dp))
-        SampleBanner("Showing example data.", "Make it yours") { Nav.tab = "track" }
+        SampleBanner("Showing example data.", "Make it yours") { Nav.tab = "track"; TrackState.tab = "money" }
     }
 }
 
@@ -205,12 +205,6 @@ private fun Badge(t: String, new: Boolean) {
     Box(Modifier.clip(RoundedCornerShape(6.dp)).background(if (new) Signal else p.ink).padding(horizontal = 7.dp, vertical = 3.dp)) {
         Text(t, style = T.label.copy(fontSize = 10.sp), color = if (new) Color(0xFF1A0A02) else p.paper)
     }
-}
-
-@Composable
-fun TrackScreen() {
-    TopBar("Track", "Everything your widgets read from.")
-    EmptyCard("Track is on its way", "Money, renewals, habits, goals and the rest arrive in build 5.")
 }
 
 @Composable
