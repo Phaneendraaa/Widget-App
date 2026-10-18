@@ -180,7 +180,8 @@ object Widgets {
             m.updateAppWidget(id, rv)
             return
         }
-        val r = renderWidget(conf.copy(size = size), (wDp * density).toInt(), (hDp * density).toInt(), density)
+        val k = density * widgetScale(size, wDp)
+        val r = renderWidget(conf.copy(size = size), (wDp * density).toInt(), (hDp * density).toInt(), k)
         rv.setImageViewBitmap(R.id.img, r.bitmap)
         rv.setContentDescription(R.id.img, conf.type)
         val cw = r.bitmap.width / COLS.toFloat()

@@ -30,17 +30,18 @@ class RenderSheetTest {
         WFonts.init(ctx.assets)
         val k = 2.5f
         // smallest common launcher sizes: 2x2 ≈ 150dp, 4x1 ≈ 320x76, 4x2 ≈ 320x160
-        val sizes = mapOf("s" to (148f to 148f), "w" to (320f to 76f), "m" to (320f to 168f))
+        // real phone home-screen sizes (a vivo/Pixel-class 4-column grid), scaled the way widgets are on the phone
+        val sizes = mapOf("s" to (176f to 176f), "w" to (364f to 92f), "m" to (364f to 192f))
         val items = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, if (t.type == "now") "ink" else "paper", ref = Catalog.defaultRef(t.type)) } } + listOf(
             WConf("t", "spend", "ring", "s", accent = "#9BBF2A", bg = "#1E3A5F", radius = 8, outline = true, title = "Coffee money"),
             WConf("t", "countdown", "flip", "w", accent = "#D6409F", bg = "#FDE2E4", alpha = 70, title = "Goa trip", ref = Catalog.defaultRef("countdown")),
             WConf("t", "streak", "heat", "m", "ink", "#0EA5A4", fg = "#F0B400", radius = 0, ref = Catalog.defaultRef("streak")),
         )
         val gap = 16
-        val colW = (330 * k).toInt()
+        val colW = (370 * k).toInt()
         val cells = items.map { c ->
             val (w, h) = sizes.getValue(c.size)
-            renderWidget(c, (w * k).toInt(), (h * k).toInt(), k, sample = true).bitmap to "${c.type}/${c.design}"
+            renderWidget(c, (w * k).toInt(), (h * k).toInt(), k * com.phani.widgets.widget.widgetScale(c.size, w), sample = true).bitmap to "${c.type}/${c.design}"
         }
         val cols = 3
         val rowsH = cells.chunked(cols).map { r -> r.maxOf { it.first.height } + (24 * k).toInt() + gap }

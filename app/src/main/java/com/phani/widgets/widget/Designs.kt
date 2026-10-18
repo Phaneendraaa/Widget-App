@@ -493,19 +493,24 @@ object Designs {
         }
         when (conf.design) {
             "heat" -> {
-                if (showLabel) label(ttl("${h.name} · 20 weeks"), pad, pad + 11.5f, W - 2 * pad - 52f)
+                val gap0 = 3f; val rows0 = 7
+                val gtop0 = pad + 22f + cap(26f) + 6f + 14f
+                val cell0 = ((H - pad - gtop0 - gap0 * (rows0 - 1)) / rows0).coerceIn(7f, 13f)
+                val cols = (((W - 2 * pad + gap0) / (cell0 + gap0)).toInt()).coerceIn(12, 30)
+                if (showLabel) label(ttl("${h.name} · $cols weeks"), pad, pad + 11.5f, W - 2 * pad - 52f)
                 val base = pad + 22f + cap(26f) + 6f
                 val w = num(st.n.toString(), pad, base, 26f)
                 text("day streak · $rec", pad + w + 6f, base, 14f, uiFace(500), p.fg, maxW = W - 2 * pad - w - 60f)
                 button(W - pad - 44f, pad, 44f, 44f, if (st.today) "ghost" else "acc", "hab", h.id, ic = Paths.check)
-                val cols = 20; val rows = 7; val gap = 3f
+                val rows = 7; val gap = 3f
                 val gtop = base + 14f
                 val cell = min((W - 2 * pad - gap * (cols - 1)) / cols, (H - pad - gtop - gap * (rows - 1)) / rows)
+                val gx = pad + ((W - 2 * pad) - (cols * cell + (cols - 1) * gap)) / 2
                 val start = t0.minusDays((cols * rows - 1).toLong())
                 for (i in 0 until cols * rows) {
                     val col = i / rows; val row = i % rows
                     val k = start.plusDays(i.toLong()).toString()
-                    val cx = pad + col * (cell + gap); val cy = gtop + row * (cell + gap)
+                    val cx = gx + col * (cell + gap); val cy = gtop + row * (cell + gap)
                     val last = i == cols * rows - 1
                     when {
                         h.done.contains(k) -> rrect(cx, cy, cell, cell, 2.5f, fill(if (last) p.acc else p.fg))
