@@ -2,6 +2,7 @@ package com.phani.widgets.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,18 +14,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.phani.widgets.core.Actions
 import com.phani.widgets.core.AppStore
 import com.phani.widgets.core.Catalog
+import com.phani.widgets.core.DesignDef
+import com.phani.widgets.core.TypeDef
 import com.phani.widgets.core.WConf
 import com.phani.widgets.widget.Hit
 import com.phani.widgets.widget.Widgets
@@ -35,39 +45,108 @@ fun runHit(hit: Hit) {
     if (r.msg != null) Toaster.show(r.msg, r.undo)
 }
 
+/** Gallery filters. [size] and [bindId] are set when an empty widget on the home screen asked for one. */
+object Gallery {
+    var cat by mutableStateOf("all")
+    var size by mutableStateOf<String?>(null)
+    var bindId by mutableIntStateOf(-1)
+}
+
 @Composable
-fun HomeScreen() {
-    AppStore.rev
+private fun TopTitle(title: String) {
     val p = pal()
-    val d = AppStore.data
-    Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Widgets", style = T.h1, color = p.ink, modifier = Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = T.h1, color = p.ink, modifier = Modifier.weight(1f))
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).background(p.card).clickable { Nav.screen = "settings" }, contentAlignment = Alignment.Center) {
             Icon(Ic.gear, "Settings", tint = p.ink, modifier = Modifier.size(22.dp))
         }
     }
-    if (d.placed.isEmpty()) { EmptyHome(); return }
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        d.placed.forEach { WidgetCard(it) }
+}
+
+/* ---------------- Gallery: every design, straight away ---------------- */
+
+@Composable
+fun GalleryScreen() {
+    AppStore.rev
+    val p = pal()
+    TopTitle("Widgets")
+    val size = Gallery.size
+    if (size != null) {
+        Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text("Pick one for your ${Catalog.sizeName[size]} (${Catalog.sizeGrid[size]}) widget", style = T.smallB, color = p.paper, modifier = Modifier.weight(1f))
+            Text("Show all", style = T.smallB, color = p.paper.copy(alpha = 0.7f), modifier = Modifier.clickable { Gallery.size = null; Gallery.bindId = -1 }.padding(6.dp))
+        }
+    }
+    // category tabs
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        (listOf("all" to "All") + Catalog.visible.map { it.type to it.name }).forEach { (k, l) ->
+            val on = Gallery.cat == k
+            Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(if (on) p.ink else p.card).clickable { Gallery.cat = k }.padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.ink) }
+        }
+    }
+    val items = Catalog.visible.filter { Gallery.cat == "all" || it.type == Gallery.cat }
+        .flatMap { t -> t.designs.filter { size == null || it.size == size }.map { t to it } }
+    if (items.isEmpty()) { Text("No designs in this size here yet.", style = T.body, color = p.muted); return }
+    // small designs pair up, wide and large take the whole row
+    val rows = mutableListOf<List<Pair<TypeDef, DesignDef>>>()
+    var half: Pair<TypeDef, DesignDef>? = null
+    items.forEach { it2 ->
+        if (it2.second.size == "s") { if (half == null) half = it2 else { rows.add(listOf(half!!, it2)); half = null } }
+        else rows.add(listOf(it2))
+    }
+    half?.let { rows.add(listOf(it)) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        rows.forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f)) }
+                if (row.size == 1 && row[0].second.size == "s") Spacer(Modifier.weight(1f))
+            }
+        }
     }
 }
 
 @Composable
-private fun EmptyHome() {
+private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier) {
+    val p = pal()
+    val (wbg, _) = wall()
+    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, if ((t.type + d.id).hashCode() % 3 == 0) "ink" else "paper")
+    val open = { Create.startFrom(t.type, d.id, Gallery.bindId); Gallery.bindId = -1; Gallery.size = null }
+    Column(modifier.clip(RoundedCornerShape(24.dp)).background(p.card).clickable { open() }) {
+        Box(Modifier.fillMaxWidth().background(wbg).padding(14.dp), contentAlignment = Alignment.Center) {
+            WidgetView(conf, Modifier.widthIn(max = if (d.size == "s") 160.dp else 330.dp), live = false, sample = true, onTap = { open() })
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(if (d.size == "s") t.name else "${t.name} · ${d.name}", style = T.bodyB, color = p.ink, maxLines = 1)
+                Text(if (d.size == "s") "${d.name} · ${Catalog.sizeGrid[d.size]}" else "${Catalog.sizeGrid[d.size]} · ${typeBlurb(t.type)}", style = T.small, color = p.muted, maxLines = 1)
+            }
+        }
+    }
+}
+
+/* ---------------- My widgets ---------------- */
+
+@Composable
+fun MineScreen() {
     AppStore.rev
     val p = pal()
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        val (wbg, _) = wall()
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(wbg).padding(18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.weight(1f)) { WidgetView(WConf("e1", "countdown", "big", "s", accent = "cobalt"), live = false, sample = true) }
-            Box(Modifier.weight(1f)) { WidgetView(WConf("e2", "streak", "big", "s", "ink"), live = false, sample = true) }
+    val d = AppStore.data
+    TopTitle("My widgets")
+    if (d.placed.isEmpty()) {
+        Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Nothing here yet", style = T.h3, color = p.ink)
+            Text("Pick a design in Widgets, fill in your details and add it to your home screen.", style = T.body, color = p.muted, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(6.dp))
+            BigButton("Browse widgets") { Nav.screen = "home" }
         }
-        Spacer(Modifier.height(6.dp))
-        Text("Make your first widget", style = T.h3, color = p.ink)
-        Text("Pick one, add your info, style it, and put it on your home screen.", style = T.body, color = p.muted, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 12.dp))
-        Spacer(Modifier.height(6.dp))
-        BigButton("Create a widget", icon = Ic.plus) { Create.startNew() }
+        return
+    }
+    val live = d.placed.count { Widgets.isOnPhone(it.id) }
+    Text("${d.placed.size} saved · $live on your home screen", style = T.small, color = p.muted, modifier = Modifier.padding(bottom = 14.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        d.placed.forEach { WidgetCard(it) }
     }
 }
 
@@ -77,22 +156,21 @@ private fun WidgetCard(c: WConf) {
     val p = pal()
     val on = Widgets.isOnPhone(c.id)
     val (wbg, _) = wall()
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(p.card).clickable { Create.startEdit(c) }.padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(wbg).padding(16.dp), contentAlignment = Alignment.Center) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).clickable { Create.startEdit(c) }) {
+        Box(Modifier.fillMaxWidth().background(wbg).padding(14.dp), contentAlignment = Alignment.Center) {
             WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = true, onTap = { Create.startEdit(c) }) { runHit(it) }
         }
-        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 4.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(widgetName(c), style = T.bodyB, color = p.ink, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(7.dp).clip(RoundedCornerShape(4.dp)).background(if (on) p.good else p.muted.copy(alpha = 0.5f)))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (on) "On your home screen" else "Not on your home screen yet", style = T.small, color = p.muted)
+                    Text(if (on) "On your home screen" else "Not on your home screen", style = T.small, color = p.muted)
                 }
             }
             if (!on) Box(Modifier.height(38.dp).clip(RoundedCornerShape(19.dp)).background(p.ink)
-                .clickable { Create.startEdit(c); Create.step = 3 }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                .clickable { Create.startEdit(c, add = true) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                 Text("Add", style = T.smallB, color = p.paper)
             }
             else Text("Edit", style = T.smallB, color = p.ink, modifier = Modifier.clickable { Create.startEdit(c) }.padding(10.dp))
@@ -100,5 +178,21 @@ private fun WidgetCard(c: WConf) {
     }
 }
 
-/** Name of the home-screen size, for help text. */
-fun sizeLabel(size: String) = "${Catalog.sizeName[size]} (${Catalog.sizeGrid[size]})"
+/* ---------------- bottom bar ---------------- */
+
+@Composable
+fun BottomTabs() {
+    val p = pal()
+    val n = AppStore.data.placed.size
+    Row(Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(30.dp)).background(p.nav).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(Triple("home", "Widgets", Ic.grid), Triple("mine", if (n > 0) "My widgets · $n" else "My widgets", Ic.home)).forEach { (k, l, ic) ->
+            val on = Nav.screen == k
+            Row(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(24.dp)).background(if (on) p.ink else Color.Transparent).clickable { Nav.screen = k },
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                Icon(ic, null, tint = if (on) p.paper else p.muted, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted)
+            }
+        }
+    }
+}

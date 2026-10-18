@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.phani.widgets.core.AppStore
 
-/** Two places: Home (your widgets) and Settings. Making a widget is a full-screen flow on top. */
+/** Widgets (the gallery, home), My widgets, and Settings. The editor opens full-screen on top. */
 object Nav {
     var screen by mutableStateOf("home")
 }
@@ -33,20 +33,24 @@ fun AppShell() {
     AppStore.rev
     ClockTicker()
     Box(Modifier.fillMaxSize().background(p.paper)) {
-        if (Nav.screen == "settings") BackHandler { Nav.screen = "home" }
+        if (Nav.screen != "home") BackHandler { Nav.screen = "home" }
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            Modifier.fillMaxSize().verticalScroll(androidx.compose.runtime.key(Nav.screen) { rememberScrollState() })
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = Pad)
                 .padding(top = 8.dp, bottom = 120.dp),
         ) {
-            if (Nav.screen == "settings") SettingsScreen() else HomeScreen()
+            when (Nav.screen) {
+                "settings" -> SettingsScreen()
+                "mine" -> MineScreen()
+                else -> GalleryScreen()
+            }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = Pad).padding(bottom = 14.dp)) {
             ToastHost(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 if (AppStore.undo()) Toaster.show("Undone")
             }
-            if (Nav.screen == "home" && AppStore.data.placed.isNotEmpty()) BigButton("New widget", icon = Ic.plus) { Create.startNew() }
+            if (Nav.screen != "settings") BottomTabs()
         }
         if (Create.open) CreateScreen()
         SheetHost()

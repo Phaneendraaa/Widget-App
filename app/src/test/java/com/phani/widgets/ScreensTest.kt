@@ -54,12 +54,12 @@ class ScreensTest {
         fun step(block: () -> Unit) { rule.runOnIdle(block) }
 
         shot("Welcome")
-        step { AppStore.change { onboarded = true } }; shot("Home, empty")
-        step { Create.startNew() }; shot("1 Pick")
-        step { Create.pick("countdown") }; shot("2 Info, blank")
-        step { val c = Create.conf!!; AppStore.change { dates.first { it.id == c.ref }.name = "Lisbon trip" } }; shot("2 Info, filled")
-        step { Create.step = 2 }; shot("3 Style")
-        step { Create.commit(); Create.step = 3 }; shot("4 Add")
+        step { AppStore.change { onboarded = true } }; shot("Widgets (home)")
+        step { com.phani.widgets.ui.Gallery.cat = "countdown" }; shot("Widgets, Countdown tab")
+        step { com.phani.widgets.ui.Gallery.cat = "all"; Create.startFrom("countdown", "big") }; shot("Editor, new")
+        step { val c = Create.conf!!; AppStore.change { dates.first { it.id == c.ref }.name = "Lisbon trip" } }; shot("Editor, filled")
+        step { Create.conf = Create.conf!!.copy(design = "flip", size = "w") }; shot("Editor, Wide size")
+        step { Create.commit(); Create.adding = true }; shot("Add to home screen")
         step {
             Create.close()
             AppStore.change {
@@ -68,12 +68,12 @@ class ScreensTest {
                 clocks.add(WClock(uid(), "London", "Europe/London")); clocks.add(WClock(uid(), "Tokyo", "Asia/Tokyo"))
                 placed.add(WConf(uid(), "spend", "strip", "w", "ink", "mint"))
                 placed.add(WConf(uid(), "subs", "next", "s", accent = "rose"))
-                placed.add(WConf(uid(), "clock", "pair", "w", "paper", "cobalt"))
             }
+            Nav.screen = "mine"
         }
-        shot("Home, with widgets")
-        step { Create.startNew(); Create.pick("subs") }; shot("2 Info, renewals")
-        step { Create.close(); Create.startNew(); Create.pick("clock") }; shot("2 Info, clock")
+        shot("My widgets")
+        step { Nav.screen = "home"; Create.startFrom("subs", "next") }; shot("Editor, renewals")
+        step { Create.close(); Create.startFrom("clock", "pair") }; shot("Editor, clock")
         step { Create.close(); Nav.screen = "settings" }; shot("Settings")
 
         val k = 0.36f

@@ -47,7 +47,11 @@ class MainActivity : ComponentActivity() {
         i ?: return
         val bind = i.getIntExtra("bindId", -1)
         if (bind != -1) {
-            Create.startNew(bindId = bind, size = i.getStringExtra("size"))
+            com.phani.widgets.ui.Gallery.bindId = bind
+            com.phani.widgets.ui.Gallery.size = i.getStringExtra("size")
+            com.phani.widgets.ui.Gallery.cat = "all"
+            com.phani.widgets.ui.Nav.screen = "home"
+            if (Create.open) Create.close()
             i.removeExtra("bindId")
             return
         }

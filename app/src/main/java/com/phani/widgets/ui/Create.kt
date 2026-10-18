@@ -64,57 +64,50 @@ import com.phani.widgets.widget.preferredHeight
 import kotlinx.coroutines.delay
 
 /**
- * Making or editing one widget, as four full-screen steps:
- * 0 Pick → 1 Your info → 2 Style → 3 Add to phone.
+ * The widget editor: opened by tapping a design in the gallery, or a saved widget in My widgets.
+ * One screen: preview, your details, size, style, and Add to home screen.
  */
 object Create {
     var open by mutableStateOf(false)
-    var step by mutableIntStateOf(0)
     var conf by mutableStateOf<WConf?>(null)
     var editing by mutableStateOf(false)
     /** Set when a widget was dropped on the home screen first and needs one of ours. */
     var bindId by mutableIntStateOf(-1)
-    var size by mutableStateOf<String?>(null)
+    /** Shows the "add to home screen" sheet. */
+    var adding by mutableStateOf(false)
     private var madeRef: String? = null
 
-    fun startNew(bindId: Int = -1, size: String? = null) {
-        this.bindId = bindId; this.size = size
-        conf = null; editing = false; madeRef = null; step = 0; open = true
-    }
-
-    fun startEdit(c: WConf) {
-        bindId = -1; size = null; conf = c; editing = true; madeRef = null; step = 1; open = true
-    }
-
-    fun pick(type: String) {
+    fun startFrom(type: String, design: String, bindId: Int = -1) {
         val t = Catalog.type(type)
-        val d = t.designs.firstOrNull { size == null || it.size == size } ?: t.designs[0]
+        val d = t.designs.firstOrNull { it.id == design } ?: t.designs[0]
         val ref = when (type) {
-            "countdown" -> uid().also { id -> AppStore.change { dates.add(DateItem(id, "", today().plusDays(30).toString(), false)) } }
+            "countdown" -> if (d.id == "stack") null else uid().also { id -> AppStore.change { dates.add(DateItem(id, "", today().plusDays(30).toString(), false)) } }
             "streak" -> uid().also { id -> AppStore.change { habits.add(Habit(id, "", 0, 1, mutableSetOf(), mutableSetOf())) } }
             "counter" -> uid().also { id -> AppStore.change { counters.add(Counter(id, "", "glasses", 8, mutableMapOf())) } }
             else -> null
         }
         madeRef = ref
         conf = WConf(uid(), type, d.id, d.size, ref = ref)
-        step = 1
+        this.bindId = bindId; editing = false; adding = false; open = true
     }
 
-    /** Save the widget to the app's list (new or changed). */
+    fun startEdit(c: WConf, add: Boolean = false) {
+        bindId = -1; conf = c; editing = true; madeRef = null; open = true; adding = add
+    }
+
+    /** Save the widget to My widgets (new or changed). */
     fun commit() {
         val c = conf ?: return
         AppStore.change { val i = placed.indexOfFirst { it.id == c.id }; if (i >= 0) placed[i] = c else placed.add(0, c) }
-        madeRef = null
+        madeRef = null; editing = true
     }
 
     fun close() {
-        // a new widget abandoned half-way leaves nothing behind
+        // a new widget left without saving leaves nothing behind
         val r = madeRef
         if (r != null && AppStore.data.placed.none { it.ref == r }) AppStore.change { dates.removeAll { it.id == r }; habits.removeAll { it.id == r }; counters.removeAll { it.id == r } }
-        madeRef = null; open = false; conf = null; bindId = -1; size = null
+        madeRef = null; open = false; conf = null; bindId = -1; adding = false
     }
-
-    fun back() { if (step == 0 || (editing && step == 1)) close() else step-- }
 
     fun delete(c: WConf) {
         AppStore.change(true) {
@@ -122,7 +115,7 @@ object Create {
             val r = c.ref
             if (r != null && placed.none { it.ref == r }) { dates.removeAll { it.id == r }; habits.removeAll { it.id == r }; counters.removeAll { it.id == r } }
         }
-        open = false; conf = null
+        open = false; conf = null; adding = false
         Toaster.show("Widget deleted", true)
     }
 }
@@ -144,31 +137,49 @@ fun widgetName(c: WConf): String {
 fun CreateScreen() {
     AppStore.rev
     val p = pal()
-    AppStore.rev
-    BackHandler { Create.back() }
-    val c = Create.conf
+    BackHandler { Create.close() }
+    val c = Create.conf ?: return
+    val ok = infoOk(c)
+    val onPhone = Widgets.isOnPhone(c.id)
+    val saved = AppStore.data.placed.any { it.id == c.id }
     Column(Modifier.fillMaxSize().background(p.paper).windowInsetsPadding(WindowInsets.systemBars).imePadding()) {
-        // header: back · step · close
         Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            RoundBtn(if (Create.step == 0 || (Create.editing && Create.step == 1)) Ic.x else Ic.back, "Back") { Create.back() }
-            Spacer(Modifier.weight(1f))
-            StepDots(Create.step)
-            Spacer(Modifier.weight(1f))
-            if (Create.editing && c != null && Create.step == 1) RoundBtn(Ic.trash, "Delete") { Create.delete(c) }
-            else Spacer(Modifier.size(44.dp))
+            RoundBtn(Ic.back, "Back") { Create.close() }
+            Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                Text(Catalog.type(c.type).name, style = T.bodyB.copy(fontSize = 17.sp), color = p.ink)
+                Text("${Catalog.design(c.type, c.design).name} · ${Catalog.sizeGrid[c.size]}", style = T.small, color = p.muted)
+            }
+            if (saved) RoundBtn(Ic.trash, "Delete") { Create.delete(c) }
         }
-        when {
-            Create.step == 0 || c == null -> PickStep()
-            Create.step == 1 -> InfoStep(c)
-            Create.step == 2 -> StyleStep(c)
-            else -> AddStep(c)
+        Box(Modifier.padding(horizontal = Pad)) { Preview(c) }
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = Pad).padding(top = 18.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            SectionHead("1", infoQuestion(c), infoSub(c))
+            InfoFields(c)
+            Spacer(Modifier.height(4.dp))
+            SectionHead("2", "Size on your home screen", null)
+            SizePicker(c)
+            Spacer(Modifier.height(4.dp))
+            SectionHead("3", "Style", "Optional. Change colours, text and shape.")
+            StyleSection(c)
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = Pad).padding(top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            when {
+                !ok -> BigButton(hint(c), kind = "ghost") {}
+                onPhone -> BigButton("Save") { Create.commit(); Create.close(); Toaster.show("Saved. Your home screen is updated.") }
+                else -> BigButton("Add to home screen") { Create.commit(); Create.adding = true }
+            }
+            if (ok && !onPhone) Text(if (saved) "Save changes only" else "Save to My widgets for later", style = T.smallB, color = p.muted, textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { Create.commit(); Create.close(); Nav.screen = "mine"; Toaster.show("Saved to My widgets") }.padding(10.dp))
         }
     }
+    if (Create.adding) AddSheet(c)
 }
 
 @Composable
 private fun RoundBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, onClick: () -> Unit) {
-    AppStore.rev
     val p = pal()
     Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, desc, tint = p.ink, modifier = Modifier.size(22.dp))
@@ -176,36 +187,52 @@ private fun RoundBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc
 }
 
 @Composable
-private fun StepDots(step: Int) {
-    AppStore.rev
+private fun SectionHead(n: String, title: String, sub: String?) {
     val p = pal()
-    val names = listOf("Pick", "Your info", "Style", "Add")
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Step ${step + 1} of 4 · ${names[step]}", style = T.smallB, color = p.muted)
-        Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            (0..3).forEach { i -> Box(Modifier.height(4.dp).width(if (i == step) 22.dp else 10.dp).clip(RoundedCornerShape(2.dp)).background(if (i <= step) p.ink else p.soft)) }
+    Row(verticalAlignment = Alignment.Top) {
+        Box(Modifier.size(26.dp).clip(RoundedCornerShape(13.dp)).background(p.ink), contentAlignment = Alignment.Center) {
+            Text(n, style = T.smallB, color = p.paper)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(title, style = T.h3.copy(fontSize = 19.sp), color = p.ink)
+            if (sub != null) Text(sub, style = T.small, color = p.muted, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
 
-/** Title + scrolling body + a fixed bottom button: the shape of every step. */
+/** Small / Wide / Large: switches to this widget's design in that size. */
 @Composable
-private fun ColumnScope.StepBody(title: String, sub: String?, top: (@Composable () -> Unit)? = null, bottom: @Composable () -> Unit, body: @Composable ColumnScope.() -> Unit) {
-    AppStore.rev
+private fun SizePicker(c: WConf) {
     val p = pal()
-    if (top != null) Box(Modifier.padding(horizontal = Pad)) { top() }
-    Column(
-        Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = Pad).padding(top = 14.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
-        Column {
-            Text(title, style = T.h1.copy(fontSize = 28.sp, lineHeight = 31.sp), color = p.ink)
-            if (sub != null) Text(sub, style = T.body, color = p.muted, modifier = Modifier.padding(top = 6.dp))
+    val t = Catalog.type(c.type)
+    val locked = Widgets.isOnPhone(c.id)
+    val sizes = listOf("s", "w", "m").filter { s -> t.designs.any { it.size == s } }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        sizes.forEach { s ->
+            val on = c.size == s
+            val enabled = !locked || on
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(if (on) p.ink else p.card)
+                .clickable(enabled = enabled) {
+                    val d = t.designs.first { it.size == s }
+                    Create.conf = c.copy(design = d.id, size = s)
+                }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                SizeIcon(s, if (on) p.paper else if (enabled) p.ink else p.muted.copy(alpha = 0.4f))
+                Spacer(Modifier.height(6.dp))
+                Text(Catalog.sizeName[s] ?: "", style = T.smallB, color = if (on) p.paper else if (enabled) p.ink else p.muted.copy(alpha = 0.4f))
+                Text(Catalog.sizeGrid[s] ?: "", style = T.small.copy(fontSize = 12.sp), color = if (on) p.paper.copy(alpha = 0.7f) else p.muted)
+            }
         }
-        body()
     }
-    Column(Modifier.fillMaxWidth().padding(horizontal = Pad).padding(top = 8.dp, bottom = 12.dp)) { bottom() }
+    if (locked) Text("It's on your home screen at this size. To change size, add it again and remove the old one.", style = T.small, color = p.muted)
+}
+
+@Composable
+private fun SizeIcon(s: String, color: Color) {
+    val (w, h) = when (s) { "s" -> 18.dp to 18.dp; "w" -> 30.dp to 9.dp; else -> 30.dp to 18.dp }
+    Box(Modifier.height(20.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(w, h).clip(RoundedCornerShape(4.dp)).border(2.dp, color, RoundedCornerShape(4.dp)))
+    }
 }
 
 /** The widget at a fixed size on a wallpaper-coloured backdrop. */
@@ -230,43 +257,8 @@ fun Thumb(c: WConf, boxW: Float, boxH: Float, sample: Boolean = false, onTap: ((
     }
 }
 
-/* ---------------- 1. Pick ---------------- */
-
-@Composable
-private fun ColumnScope.PickStep() {
-    AppStore.rev
-    val p = pal()
-    val size = Create.size
-    val types = Catalog.visible.filter { t -> size == null || t.designs.any { it.size == size } }
-    StepBody(
-        "What should it show?",
-        if (size != null) "For your ${Catalog.sizeName[size]} widget. Tap one." else "Tap one. You'll add your own info next.",
-        bottom = {},
-    ) {
-        types.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { t ->
-                    val d = t.designs.firstOrNull { size == null || it.size == size } ?: t.designs[0]
-                    val conf = WConf("pk" + t.type, t.type, d.id, d.size)
-                    Column(Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(p.card).clickable { Create.pick(t.type) }.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val (wbg, _) = wall()
-                        Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(16.dp)).background(wbg), contentAlignment = Alignment.Center) {
-                            Thumb(conf, 156f, 146f, sample = true) { Create.pick(t.type) }
-                        }
-                        Column(Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) {
-                            Text(t.name, style = T.bodyB, color = p.ink)
-                            Text(short(t.type), style = T.small, color = p.muted, maxLines = 2)
-                        }
-                    }
-                }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-private fun short(type: String) = when (type) {
+/** One line on what each widget does, for the gallery. */
+fun typeBlurb(type: String) = when (type) {
     "countdown" -> "Days until a date that matters"
     "streak" -> "Tick off a habit every day"
     "spend" -> "What you can spend today"
@@ -278,12 +270,10 @@ private fun short(type: String) = when (type) {
 
 /* ---------------- 2. Your info ---------------- */
 
-@Composable
-private fun ColumnScope.InfoStep(c: WConf) {
-    AppStore.rev
+private fun infoOk(c: WConf): Boolean {
     val d = AppStore.data
-    val ok = when (c.type) {
-        "countdown" -> c.design == "stack" || d.dates.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
+    return when (c.type) {
+        "countdown" -> if (c.design == "stack") d.dates.any { it.name.isNotBlank() } else d.dates.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
         "streak" -> d.habits.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
         "counter" -> d.counters.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
         "spend" -> d.budget > 0
@@ -291,18 +281,31 @@ private fun ColumnScope.InfoStep(c: WConf) {
         "clock" -> d.clocks.isNotEmpty()
         else -> true
     }
-    val (title, sub) = when (c.type) {
-        "countdown" -> "What are you counting down to?" to null
-        "streak" -> "What habit are you building?" to "Tap the ✓ on the widget each day you do it."
-        "counter" -> "What are you counting?" to "Tap the widget to add one. It starts again at zero every day."
-        "spend" -> "What's your monthly budget?" to "The widget shows what you can spend today so the month lasts. Log spending with its buttons."
-        "subs" -> "Which subscriptions do you pay?" to "The widget shows the next charge before it hits."
-        "clock" -> "Which cities?" to "Pick up to 3. Two show on the Wide size."
-        else -> "Your info" to null
-    }
-    StepBody(title, sub, top = { Preview(c) }, bottom = {
-        BigButton(if (ok) "Next: style it" else hint(c.type), kind = if (ok) "solid" else "ghost") { if (ok) Create.step = 2 }
-    }) {
+}
+
+private fun infoQuestion(c: WConf) = when (c.type) {
+    "countdown" -> if (c.design == "stack") "Your countdowns" else "What are you counting down to?"
+    "streak" -> "What habit are you building?"
+    "counter" -> "What are you counting?"
+    "spend" -> "What's your monthly budget?"
+    "subs" -> "Which subscriptions do you pay?"
+    "clock" -> "Which cities?"
+    else -> "Your details"
+}
+
+private fun infoSub(c: WConf): String? = when (c.type) {
+    "streak" -> "Tap the ✓ on the widget each day you do it."
+    "counter" -> "Tap the widget to add one. It starts at zero every day."
+    "spend" -> "Shows what you can spend today so the month lasts."
+    "subs" -> "Shows the next charge before it hits."
+    "clock" -> "Pick up to 3. The Wide size shows two."
+    else -> null
+}
+
+@Composable
+private fun InfoFields(c: WConf) {
+    AppStore.rev
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         when (c.type) {
             "countdown" -> CountdownInfo(c)
             "streak" -> StreakInfo(c)
@@ -314,11 +317,12 @@ private fun ColumnScope.InfoStep(c: WConf) {
     }
 }
 
-private fun hint(type: String) = when (type) {
-    "spend" -> "Enter a budget to continue"
-    "subs" -> "Add one to continue"
-    "clock" -> "Pick a city to continue"
-    else -> "Give it a name to continue"
+private fun hint(c: WConf) = when (c.type) {
+    "spend" -> "Enter your budget above"
+    "subs" -> "Add a subscription above"
+    "clock" -> "Pick a city above"
+    "countdown" -> if (c.design == "stack") "Make a countdown first" else "Give it a name above"
+    else -> "Give it a name above"
 }
 
 private fun num(s: String): Double? = s.replace(",", ".").trim().toDoubleOrNull()
@@ -327,7 +331,7 @@ private fun num(s: String): Double? = s.replace(",", ".").trim().toDoubleOrNull(
 private fun CountdownInfo(c: WConf) {
     AppStore.rev
     if (c.design == "stack") {
-        Text("This design lists all your countdowns. Make a countdown first with another design.", style = T.body, color = pal().muted); return
+        Text("This design lists your next three countdowns. Make them with the Small or Wide size first.", style = T.body, color = pal().muted); return
     }
     val x = AppStore.data.dates.firstOrNull { it.id == c.ref } ?: return
     var name by remember(x.id) { mutableStateOf(x.name) }
@@ -434,33 +438,26 @@ private fun ClockInfo() {
     }
 }
 
-/* ---------------- 3. Style ---------------- */
+/* ---------------- Style ---------------- */
 
 @Composable
-private fun ColumnScope.StyleStep(start: WConf) {
+private fun StyleSection(c: WConf) {
     AppStore.rev
     var tab by remember { mutableStateOf("design") }
-    val c = start
     val set: (WConf) -> Unit = { Create.conf = it }
     val p = pal()
-    StepBody("Make it yours", null, top = {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Preview(c)
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                listOf("design" to "Design", "colour" to "Colour", "text" to "Text", "shape" to "Shape").forEach { (k, l) ->
-                    val on = tab == k
-                    Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.ink else Color.Transparent).clickable { tab = k },
-                        contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted) }
-                }
-            }
+    val many = Catalog.type(c.type).designs.count { it.size == c.size } > 1
+    val tabs = (if (many) listOf("design" to "Design") else emptyList()) + listOf("colour" to "Colour", "text" to "Text", "shape" to "Shape")
+    val cur = if (tabs.any { it.first == tab }) tab else tabs[0].first
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        tabs.forEach { (k, l) ->
+            val on = cur == k
+            Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.ink else Color.Transparent).clickable { tab = k },
+                contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted) }
         }
-    }, bottom = {
-        BigButton(if (Create.editing) "Save" else "Next: add to phone") {
-            Create.commit()
-            if (Create.editing && Widgets.isOnPhone(c.id)) { Create.close(); Toaster.show("Saved. Your home screen is updated.") } else Create.step = 3
-        }
-    }) {
-        when (tab) {
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        when (cur) {
             "design" -> DesignTab(c, set)
             "colour" -> ColourTab(c, set)
             "text" -> TextTab(c, set)
@@ -474,8 +471,7 @@ private fun DesignTab(c: WConf, set: (WConf) -> Unit) {
     AppStore.rev
     val p = pal()
     val t = Catalog.type(c.type)
-    val onPhone = Widgets.isOnPhone(c.id)
-    val designs = t.designs.filter { Create.size == null || it.size == Create.size }.filter { !(onPhone && it.size != c.size) }
+    val designs = t.designs.filter { it.size == c.size }
     designs.chunked(2).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             row.forEach { d ->
@@ -496,7 +492,6 @@ private fun DesignTab(c: WConf, set: (WConf) -> Unit) {
             if (row.size == 1) Spacer(Modifier.weight(1f))
         }
     }
-    if (onPhone) Text("It's already on your home screen, so only designs of the same size are shown.", style = T.small, color = p.muted)
 }
 
 @Composable
@@ -548,58 +543,47 @@ private fun ShapeTab(c: WConf, set: (WConf) -> Unit) {
         }.padding(14.dp))
 }
 
-/* ---------------- 4. Add to phone ---------------- */
+/* ---------------- Add to home screen ---------------- */
 
 @Composable
-private fun ColumnScope.AddStep(c: WConf) {
+private fun AddSheet(c: WConf) {
     AppStore.rev
     val p = pal()
     val ctx = LocalContext.current
-    // dropped on the home screen first: link it now
+    val on = Widgets.isOnPhone(c.id)
+    var guide by remember { mutableStateOf(false) }
+    val canPin = remember { android.appwidget.AppWidgetManager.getInstance(ctx).isRequestPinAppWidgetSupported }
     LaunchedEffect(c.id) {
-        if (Create.bindId != -1) {
-            val id = Create.bindId
+        val id = Create.bindId
+        if (id != -1) {
+            // the empty widget is already on the home screen: link it now
             AppStore.change { bound[id] = c }
             Widgets.updateAll(ctx)
             Create.bindId = -1
-        }
+        } else if (!canPin || !Widgets.requestPin(ctx, c)) guide = true
+        else { delay(3500); if (!Widgets.isOnPhone(c.id)) guide = true }
     }
-    val on = Widgets.isOnPhone(c.id)
-    var asked by remember { mutableStateOf(false) }
-    var guide by remember { mutableStateOf(false) }
-    LaunchedEffect(asked) { if (asked) { delay(3500); if (!Widgets.isOnPhone(c.id)) guide = true } }
-    val canPin = remember { android.appwidget.AppWidgetManager.getInstance(ctx).isRequestPinAppWidgetSupported }
-    val sizeName = Catalog.sizeName[c.size] ?: "Small"
-
-    if (on) {
-        StepBody("It's on your home screen", "Change it here any time. The home screen updates by itself.", top = { Preview(c) }, bottom = {
-            BigButton("Done") { Create.close() }
-        }) {
+    val done = { Create.close(); Nav.screen = "mine" }
+    Sheet(if (on) "Added" else "Add to home screen", done) {
+        if (on) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(p.good), contentAlignment = Alignment.Center) {
-                    Icon(Ic.check, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                Box(Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(p.good), contentAlignment = Alignment.Center) {
+                    Icon(Ic.check, null, tint = Color.White, modifier = Modifier.size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("${widgetName(c)} is live", style = T.bodyB, color = p.ink)
+                Column {
+                    Text("${widgetName(c)} is on your home screen", style = T.bodyB, color = p.ink)
+                    Text("Change it in the app any time. It updates by itself.", style = T.small, color = p.muted)
+                }
             }
-        }
-        return
-    }
-
-    StepBody("Put it on your home screen", "It's saved. One more step to see it on your phone.", top = { Preview(c) }, bottom = {
-        if (canPin && !guide) {
-            BigButton(if (asked) "Waiting for your phone…" else "Add to home screen") {
-                asked = true
-                if (!Widgets.requestPin(ctx, c)) guide = true
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-        BigButton(if (guide || !canPin) "Done" else "Later", kind = "ghost") { Create.close() }
-    }) {
-        if (asked && !guide) Text("Your phone should ask you to confirm. Tap Add on that popup.", style = T.body, color = p.muted)
-        if (guide || !canPin) {
-            Text(if (canPin) "No popup? Some phones block it. Adding it by hand takes 10 seconds:" else "Add it like this:", style = T.body, color = p.ink)
-            Guide(sizeName, Catalog.sizeGrid[c.size] ?: "", widgetName(c))
+            BigButton("Done") { done() }
+        } else if (!guide) {
+            Text("Your phone will ask you to confirm. Tap Add on that popup.", style = T.body, color = p.ink)
+            Text("Waiting for your phone…", style = T.small, color = p.muted)
+        } else {
+            Text(if (canPin) "No popup? Some phones block it. Add it by hand, it takes 10 seconds:" else "Add it like this:", style = T.body, color = p.ink)
+            Guide(Catalog.sizeName[c.size] ?: "Small", Catalog.sizeGrid[c.size] ?: "", widgetName(c))
+            BigButton("Got it") { done() }
         }
     }
 }
