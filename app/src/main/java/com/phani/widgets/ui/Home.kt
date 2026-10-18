@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -52,6 +54,25 @@ object Gallery {
     var cat by mutableStateOf("all")
     var size by mutableStateOf<String?>(null)
     var bindId by mutableIntStateOf(-1)
+    var query by mutableStateOf("")
+}
+
+@Composable
+private fun SearchBar() {
+    val p = pal()
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).height(48.dp).clip(RoundedCornerShape(24.dp)).background(p.card).padding(start = 16.dp, end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(Ic.search, null, tint = p.muted, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(10.dp))
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            if (Gallery.query.isEmpty()) Text("Search widgets", style = T.body.copy(fontSize = 16.sp), color = p.muted)
+            androidx.compose.foundation.text.BasicTextField(Gallery.query, { Gallery.query = it.take(30) }, singleLine = true,
+                textStyle = T.body.copy(fontSize = 16.sp, color = p.ink), cursorBrush = androidx.compose.ui.graphics.SolidColor(p.ink), modifier = Modifier.fillMaxWidth())
+        }
+        if (Gallery.query.isNotEmpty()) Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).clickable { Gallery.query = "" }, contentAlignment = Alignment.Center) {
+            Icon(Ic.x, "Clear", tint = p.muted, modifier = Modifier.size(16.dp))
+        }
+    }
 }
 
 @Composable
@@ -80,17 +101,30 @@ fun GalleryScreen() {
             Text("Show all", style = T.smallB, color = p.paper.copy(alpha = 0.7f), modifier = Modifier.clickable { Gallery.size = null; Gallery.bindId = -1 }.padding(6.dp))
         }
     }
-    // category tabs
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        (listOf("all" to "All") + Catalog.visible.map { it.type to it.name }).forEach { (k, l) ->
+    SearchBar()
+    // category tabs: the row slides along by itself so the next tabs come into view
+    val cats = listOf("all" to "All") + Catalog.visible.map { it.type to it.name }
+    val tabState = androidx.compose.foundation.lazy.rememberLazyListState()
+    androidx.compose.runtime.LaunchedEffect(Gallery.cat) {
+        val i = cats.indexOfFirst { it.first == Gallery.cat }.coerceAtLeast(0)
+        tabState.animateScrollToItem(maxOf(0, i - 1))
+    }
+    androidx.compose.foundation.lazy.LazyRow(state = tabState, modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(cats.size) { idx ->
+            val (k, l) = cats[idx]
             val on = Gallery.cat == k
             Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.ink else p.card).clickable { Gallery.cat = k }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.ink) }
         }
     }
-    val items = Catalog.visible.filter { Gallery.cat == "all" || it.type == Gallery.cat }
+    val q = Gallery.query.trim()
+    val items = Catalog.visible.filter { q.isNotEmpty() || Gallery.cat == "all" || it.type == Gallery.cat }
         .flatMap { t -> t.designs.filter { size == null || it.size == size }.map { t to it } }
-    if (items.isEmpty()) { Text("No designs in this size here yet.", style = T.body, color = p.muted); return }
+        .filter { (t, d) -> q.isEmpty() || listOf(t.name, d.name, t.desc, typeBlurb(t.type), Catalog.sizeName[d.size] ?: "").any { it.contains(q, ignoreCase = true) } }
+    if (q.isNotEmpty()) Text(if (items.isEmpty()) "No widgets match \u201c$q\u201d" else "${items.size} result" + (if (items.size == 1) "" else "s"),
+        style = T.small, color = p.muted, modifier = Modifier.padding(bottom = 10.dp))
+    if (items.isEmpty()) { if (q.isEmpty()) Text("No designs in this size here yet.", style = T.body, color = p.muted); return }
     // small designs pair up, wide and large take the whole row
     val rows = mutableListOf<List<Pair<TypeDef, DesignDef>>>()
     var half: Pair<TypeDef, DesignDef>? = null
@@ -99,7 +133,16 @@ fun GalleryScreen() {
         else rows.add(listOf(it2))
     }
     half?.let { rows.add(listOf(it)) }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.pointerInput(Unit) {
+        var dx = 0f
+        detectHorizontalDragGestures(onDragStart = { dx = 0f }, onDragEnd = {
+            if (Gallery.query.isBlank() && kotlin.math.abs(dx) > 120f) {
+                val i = cats.indexOfFirst { it.first == Gallery.cat }.coerceAtLeast(0)
+                val j = (if (dx < 0) i + 1 else i - 1).coerceIn(0, cats.size - 1)
+                Gallery.cat = cats[j].first
+            }
+        }) { _, d -> dx += d }
+    }, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         rows.forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f)) }
