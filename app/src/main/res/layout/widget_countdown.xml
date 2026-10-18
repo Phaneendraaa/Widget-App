@@ -28,13 +28,11 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:autoSizeMaxTextSize="64sp"
-        android:autoSizeMinTextSize="24sp"
-        android:autoSizeTextType="uniform"
         android:gravity="center_vertical"
         android:maxLines="1"
         android:text="--"
         android:textColor="#FFFFC107"
+        android:textSize="44sp"
         android:textStyle="bold" />
 
     <TextView
