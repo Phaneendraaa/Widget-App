@@ -273,6 +273,15 @@ fun typeBlurb(type: String) = when (type) {
     "subs" -> "Your next subscription charge"
     "counter" -> "Tap +1 for water, coffee, reps"
     "clock" -> "The time where your people are"
+    "fast" -> "A fasting timer, one tap to start"
+    "pace" -> "Are you on track for your goal?"
+    "year" -> "How much of the year is gone"
+    "today" -> "Today's date and the month"
+    "moon" -> "Tonight's moon phase"
+    "note" -> "A line you see every unlock"
+    "next" -> "What's next on your schedule"
+    "attendance" -> "Classes you can miss, or must attend"
+    "now" -> "The one thing that needs you"
     else -> ""
 }
 

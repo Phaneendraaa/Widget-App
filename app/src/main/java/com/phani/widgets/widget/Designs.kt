@@ -68,7 +68,7 @@ object Designs {
     private fun note(x: Ctx) = with(x) {
         val n = D.notes.firstOrNull { it.id == conf.ref } ?: D.notes.firstOrNull()
         val t = n?.text?.trim().orEmpty()
-        if (t.isEmpty()) { empty("Note", "Write your note in the app"); return@with }
+        if (t.isEmpty()) { empty("Note", "Write your note"); return@with }
         when (conf.design) {
             "banner" -> {
                 val lines = if (showLabel) 1 else 2
@@ -336,7 +336,7 @@ object Designs {
 
     private fun subs(x: Ctx) = with(x) {
         val l = subsSorted()
-        if (l.isEmpty()) { empty("Renewals", "Add a subscription in the app"); return@with }
+        if (l.isEmpty()) { empty("Renewals", "Add a subscription"); return@with }
         when (conf.design) {
             "list" -> {
                 top("Upcoming charges", Fmt.money(subsMonthly(), 0) + "/mo")
@@ -415,7 +415,7 @@ object Designs {
 
     private fun counter(x: Ctx) = with(x) {
         val ct = D.counters.firstOrNull { it.id == conf.ref } ?: D.counters.firstOrNull()
-        if (ct == null) { empty("Counter", "Add a counter in the app"); return@with }
+        if (ct == null) { empty("Counter", "Add a counter"); return@with }
         val v = cnt(ct)
         val pct = (v.toFloat() / ct.goal).coerceIn(0f, 1f)
         when (conf.design) {
@@ -466,7 +466,7 @@ object Designs {
 
     private fun streakW(x: Ctx) = with(x) {
         val h = D.habits.firstOrNull { it.id == conf.ref } ?: D.habits.firstOrNull()
-        if (h == null) { empty("Streak", "Add a habit in the app"); return@with }
+        if (h == null) { empty("Streak", "Add a habit"); return@with }
         val st = streak(h)
         val t0 = today()
         val rec = if (st.n >= h.record && st.n > 1) "New best" else "Best ${h.record}"
@@ -548,7 +548,7 @@ object Designs {
 
     private fun paceW(x: Ctx) = with(x) {
         val g = D.goals.firstOrNull { it.id == conf.ref } ?: D.goals.firstOrNull()
-        if (g == null) { empty("Pace", "Add a goal in the app"); return@with }
+        if (g == null) { empty("Pace", "Add a goal"); return@with }
         val r = pace(g)
         val a = r.ahead.roundToInt()
         val stTxt = if (a <= -1) plural(-a, "day") + " behind" else if (a >= 1) plural(a, "day") + " ahead" else "On track"
@@ -593,7 +593,7 @@ object Designs {
     private fun countdown(x: Ctx) = with(x) {
         if (conf.design == "stack") {
             val rows = D.dates.map { it to dateNext(it) }.filter { it.second.days >= 0 }.sortedBy { it.second.days }.take(3)
-            if (rows.isEmpty()) { empty("Coming up", "Add a date in the app"); return@with }
+            if (rows.isEmpty()) { empty("Coming up", "Add a date"); return@with }
             top("Coming up")
             var y = pad + 26f
             var nx = pad + 56f
@@ -609,7 +609,7 @@ object Designs {
             return@with
         }
         val d = D.dates.firstOrNull { it.id == conf.ref } ?: D.dates.firstOrNull()
-        if (d == null) { empty("Countdown", "Add a date in the app"); return@with }
+        if (d == null) { empty("Countdown", "Add a date"); return@with }
         val n = dateNext(d)
         val span = if (d.yearly) 365 else max(n.days, 1) + 30
         val prog = (1f - n.days.toFloat() / span).coerceIn(0f, 1f)
@@ -710,7 +710,7 @@ object Designs {
 
     private fun clock(x: Ctx) = with(x) {
         val l = D.clocks
-        if (l.isEmpty()) { empty("World clock", "Add a city in the app"); return@with }
+        if (l.isEmpty()) { empty("World clock", "Add a city"); return@with }
         when (conf.design) {
             "analog" -> {
                 top("World clock")
@@ -772,7 +772,7 @@ object Designs {
 
     private fun next(x: Ctx) = with(x) {
         val nu = nextUp()
-        if (nu == null) { empty("Next up", "Add your schedule in the app"); return@with }
+        if (nu == null) { empty("Next up", "Add your schedule"); return@with }
         if (conf.design == "today") {
             val now = LocalTime.now(); val m = now.hour * 60 + now.minute
             val rest = daySched(dayIndex()).filter { mins(it.e) > m }.take(4)
@@ -807,7 +807,7 @@ object Designs {
     /* ---------- Attendance ---------- */
 
     private fun attendance(x: Ctx) = with(x) {
-        if (D.subjects.isEmpty()) { empty("Attendance", "Add classes in the app"); return@with }
+        if (D.subjects.isEmpty()) { empty("Attendance", "Add classes"); return@with }
         when (conf.design) {
             "single" -> {
                 val s = subjectBy(conf.ref) ?: D.subjects.minByOrNull { att(it).p }!!
