@@ -30,6 +30,12 @@ object Catalog {
             listOf(DesignDef("card", "Card", "w"), DesignDef("today", "Today", "m"))),
         TypeDef("attendance", "Attendance", "student", "Each class against your required minimum. Tells you how many you can miss, or must attend.",
             listOf(DesignDef("bars", "All classes", "m"), DesignDef("single", "One class", "s"), DesignDef("mark", "Mark class", "s"))),
+        TypeDef("note", "Note", "smart", "A line you want to see every time you unlock your phone.",
+            listOf(DesignDef("sticky", "Sticky", "s"), DesignDef("banner", "Banner", "w"), DesignDef("card", "Card", "m"))),
+        TypeDef("today", "Date", "time", "Today's date, week number and the month at a glance.",
+            listOf(DesignDef("day", "Day", "s"), DesignDef("strip", "Strip", "w"), DesignDef("month", "Month", "m"))),
+        TypeDef("moon", "Moon", "time", "Tonight's moon phase and when the next full moon is.",
+            listOf(DesignDef("moon", "Moon", "s"), DesignDef("phase", "Phase", "w"))),
     )
     val cats = listOf("all" to "All", "smart" to "Smart", "money" to "Money", "health" to "Health", "habits" to "Habits & goals", "time" to "Time", "work" to "Schedule", "student" to "Student")
     val styles = listOf(Triple("paper", "Paper", false), Triple("ink", "Ink", false), Triple("tint", "Tint", true), Triple("frost", "Frost", true), Triple("smoke", "Smoke", true), Triple("clear", "Clear", true))
@@ -41,7 +47,7 @@ object Catalog {
     val totalDesigns get() = types.sumOf { it.designs.size }
 
     /** The widgets offered in this version, in the order they're shown. The rest stay in code for later updates. */
-    val launch = listOf("countdown", "streak", "spend", "subs", "counter", "clock")
+    val launch = listOf("countdown", "streak", "spend", "subs", "counter", "clock", "fast", "pace", "year", "today", "moon", "note", "next", "attendance", "now")
     val visible get() = launch.map { type(it) }
 
     val sizeName = mapOf("s" to "Small", "w" to "Wide", "m" to "Large")
@@ -55,6 +61,7 @@ object Catalog {
             "pace" -> d.goals.firstOrNull()?.id
             "streak" -> d.habits.firstOrNull()?.id
             "counter" -> d.counters.firstOrNull()?.id
+            "note" -> d.notes.firstOrNull()?.id
             else -> null
         }
     }

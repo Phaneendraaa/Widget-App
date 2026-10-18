@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -79,10 +81,10 @@ fun GalleryScreen() {
         }
     }
     // category tabs
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         (listOf("all" to "All") + Catalog.visible.map { it.type to it.name }).forEach { (k, l) ->
             val on = Gallery.cat == k
-            Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(if (on) p.ink else p.card).clickable { Gallery.cat = k }.padding(horizontal = 16.dp),
+            Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.ink else p.card).clickable { Gallery.cat = k }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.ink) }
         }
     }
@@ -97,9 +99,9 @@ fun GalleryScreen() {
         else rows.add(listOf(it2))
     }
     half?.let { rows.add(listOf(it)) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         rows.forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f)) }
                 if (row.size == 1 && row[0].second.size == "s") Spacer(Modifier.weight(1f))
             }
@@ -111,17 +113,28 @@ fun GalleryScreen() {
 private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier) {
     val p = pal()
     val (wbg, _) = wall()
-    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, if ((t.type + d.id).hashCode() % 3 == 0) "ink" else "paper")
+    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, if (Math.floorMod((t.type + d.id).hashCode(), 3) == 0) "ink" else "paper")
     val open = { Create.startFrom(t.type, d.id, Gallery.bindId); Gallery.bindId = -1; Gallery.size = null }
-    Column(modifier.clip(RoundedCornerShape(24.dp)).background(p.card).clickable { open() }) {
-        Box(Modifier.fillMaxWidth().background(wbg).padding(14.dp), contentAlignment = Alignment.Center) {
-            WidgetView(conf, Modifier.widthIn(max = if (d.size == "s") 160.dp else 330.dp), live = false, sample = true, onTap = { open() })
+    Column(modifier.clip(RoundedCornerShape(20.dp)).background(p.card).clickable { open() }) {
+        Box(Modifier.fillMaxWidth().background(wbg).padding(10.dp), contentAlignment = Alignment.Center) {
+            Zoomed(conf, 0.78f) { open() }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(if (d.size == "s") t.name else "${t.name} · ${d.name}", style = T.bodyB, color = p.ink, maxLines = 1)
-                Text(if (d.size == "s") "${d.name} · ${Catalog.sizeGrid[d.size]}" else "${Catalog.sizeGrid[d.size]} · ${typeBlurb(t.type)}", style = T.small, color = p.muted, maxLines = 1)
-            }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
+            Text(if (d.size == "s") t.name else "${t.name} · ${d.name}", style = T.smallB.copy(fontSize = 14.sp), color = p.ink, maxLines = 1)
+            Text(if (d.size == "s") "${d.name} · ${Catalog.sizeGrid[d.size]}" else "${Catalog.sizeGrid[d.size]} · ${typeBlurb(t.type)}", style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
+        }
+    }
+}
+
+/** Draws a widget at its normal size, then shrinks it like zooming out, so nothing inside re-flows or breaks. */
+@Composable
+private fun Zoomed(c: WConf, zoom: Float, onTap: () -> Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        val nw = if (c.size == "s") 160f else 330f
+        val k = minOf(zoom, maxWidth.value / nw)
+        val nh = com.phani.widgets.widget.preferredHeight(c, nw)
+        Box(Modifier.size((nw * k).dp, (nh * k).dp), contentAlignment = Alignment.Center) {
+            WidgetView(c, Modifier.requiredWidth(nw.dp).graphicsLayer(scaleX = k, scaleY = k), live = false, sample = true, onTap = onTap)
         }
     }
 }
@@ -183,9 +196,8 @@ private fun WidgetCard(c: WConf) {
 @Composable
 fun BottomTabs() {
     val p = pal()
-    val n = AppStore.data.placed.size
     Row(Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(30.dp)).background(p.nav).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf(Triple("home", "Widgets", Ic.grid), Triple("mine", if (n > 0) "My widgets · $n" else "My widgets", Ic.home)).forEach { (k, l, ic) ->
+        listOf(Triple("home", "Widgets", Ic.grid), Triple("mine", "My widgets", Ic.home)).forEach { (k, l, ic) ->
             val on = Nav.screen == k
             Row(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(24.dp)).background(if (on) p.ink else Color.Transparent).clickable { Nav.screen = k },
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {

@@ -74,7 +74,12 @@ class ScreensTest {
         shot("My widgets")
         step { Nav.screen = "home"; Create.startFrom("subs", "next") }; shot("Editor, renewals")
         step { Create.close(); Create.startFrom("clock", "pair") }; shot("Editor, clock")
-        step { Create.close(); Nav.screen = "settings" }; shot("Settings")
+        step { Create.close(); Create.startFrom("note", "sticky") }; shot("Editor, note")
+        step { Create.close(); Create.startFrom("attendance", "bars") }; shot("Editor, attendance")
+        step { Create.close(); Create.startFrom("next", "card") }; shot("Editor, schedule")
+        step { Create.close(); Create.startFrom("moon", "moon") }; shot("Editor, moon")
+        step { Create.close(); Nav.screen = "home"; com.phani.widgets.ui.Gallery.cat = "today" }; shot("Widgets, Date tab")
+        step { com.phani.widgets.ui.Gallery.cat = "all"; Nav.screen = "settings" }; shot("Settings")
 
         val k = 0.36f
         val cw = (shots[0].second.width * k).toInt(); val ch = (shots[0].second.height * k).toInt()

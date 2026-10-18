@@ -17,6 +17,7 @@ class Fast(var start: Long?, var target: Int, val history: MutableList<FastRec>)
 class Counter(var id: String, var name: String, var unit: String, var goal: Int, val log: MutableMap<String, Int>)
 class WClock(var id: String, var city: String, var tz: String)
 class Subject(var id: String, var name: String, var short: String, var a: Int, var t: Int)
+class Note(var id: String, var text: String)
 class SchedItem(var s: String, var e: String, var title: String, var place: String, var sub: String?)
 
 /** One widget's look and content. Used by the in-app Home preview and by real home-screen widgets. */
@@ -65,6 +66,7 @@ class AppData(
     val placed: MutableList<WConf>,
     val bound: MutableMap<Int, WConf>,
     var howSeen: Boolean = false,
+    val notes: MutableList<Note> = mutableListOf(),
 )
 
 /* ---------------- JSON ---------------- */
@@ -119,6 +121,7 @@ fun AppData.toJson(): JSONObject {
     val b = JSONObject(); bound.forEach { (k, v) -> b.put(k.toString(), v.toJson()) }
     o.put("bound", b)
     o.put("howSeen", howSeen)
+    o.put("notes", JSONArray(notes.map { JSONObject().put("id", it.id).put("text", it.text) }))
     return o
 }
 
@@ -160,6 +163,7 @@ fun appDataFrom(o: JSONObject): AppData {
         placed = o.getJSONArray("placed").objs().map { wconf(it) }.toMutableList(),
         bound = bound,
         howSeen = o.optBoolean("howSeen", false),
+        notes = (o.optJSONArray("notes") ?: JSONArray()).objs().map { Note(it.getString("id"), it.getString("text")) }.toMutableList(),
     )
 }
 
@@ -241,5 +245,6 @@ fun sampleData(cur: String): AppData {
             WConf(uid(), "clock", "pair", "w", "frost", "cobalt", "serif"),
         ),
         bound = mutableMapOf(),
+        notes = mutableListOf(Note("n1", "Drink water. Call mum. Ship it on Friday.")),
     )
 }

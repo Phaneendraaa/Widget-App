@@ -57,7 +57,138 @@ object Designs {
             "clock" -> clock(x)
             "next" -> next(x)
             "attendance" -> attendance(x)
+            "note" -> note(x)
+            "today" -> dateW(x)
+            "moon" -> moon(x)
         }
+    }
+
+    /* ---------- Note ---------- */
+
+    private fun note(x: Ctx) = with(x) {
+        val n = D.notes.firstOrNull { it.id == conf.ref } ?: D.notes.firstOrNull()
+        val t = n?.text?.trim().orEmpty()
+        if (t.isEmpty()) { empty("Note", "Write your note in the app"); return@with }
+        when (conf.design) {
+            "banner" -> {
+                val lines = if (showLabel) 1 else 2
+                if (showLabel) label(ttl("Note"), 18f, H / 2 - 9f, W - 36f)
+                val sz = 17f
+                val top = if (showLabel) H / 2 - 3f else H / 2 - (if (measure(t, sz, t2Face()) > W - 36f) sz * 1.15f else sz * 0.6f)
+                para(t, 18f, top, W - 36f, sz, t2Face(), p.fg, -0.01f, 1.12f, lines)
+            }
+            "card" -> {
+                top("Note")
+                val sz = if (t.length < 40) 26f else if (t.length < 90) 21f else 17f
+                para(t, pad, if (showLabel) pad + 26f else pad, W - 2 * pad, sz, numFace(), p.fg, numSpacing() + 0.02f, 1.1f, 5)
+                circle(W - pad - 4f, pad + 7f, 4f, fill(p.acc))
+            }
+            else -> {
+                top("Note")
+                val sz = if (t.length < 24) 21f else if (t.length < 60) 17f else 14f
+                para(t, pad, if (showLabel) pad + 24f else pad, W - 2 * pad, sz, t2Face(), p.fg, -0.01f, 1.15f, if (showLabel) 5 else 6)
+            }
+        }
+    }
+
+    /* ---------- Date ---------- */
+
+    private fun dateW(x: Ctx) = with(x) {
+        val d = java.time.LocalDate.now()
+        val wk = d.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+        val dow = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
+        val mon = d.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
+        when (conf.design) {
+            "strip" -> {
+                label(ttl("$dow · week $wk"), 18f, H / 2 - 8f, W - 36f - 70f)
+                t2(if (D.dmy) "${d.dayOfMonth} $mon" else "$mon ${d.dayOfMonth}", 18f, H / 2 + 14f, 22f, maxW = W - 36f - 70f)
+                val pct = d.dayOfYear.toFloat() / d.lengthOfYear()
+                small("Day ${d.dayOfYear}", W - 18f, H / 2 - 8f, align = R)
+                ring(W - 18f - 13f, H / 2 + 9f, 26f, 4f, pct, p.acc)
+            }
+            "month" -> {
+                top("$mon ${d.year}", "Week $wk")
+                val first = d.withDayOfMonth(1)
+                val lead = (first.dayOfWeek.value - 1) // Monday first
+                val days = d.lengthOfMonth()
+                val rows = (lead + days + 6) / 7
+                val gtop = below + 6f
+                val cw = (W - 2 * pad) / 7f
+                val rh = min(22f, (H - pad - gtop - 14f) / rows)
+                listOf("M", "T", "W", "T", "F", "S", "S").forEachIndexed { i, l -> small(l, pad + cw * i + cw / 2, gtop + 8f, size = 10.5f, align = C) }
+                for (day in 1..days) {
+                    val idx = lead + day - 1
+                    val cx = pad + cw * (idx % 7) + cw / 2
+                    val cy = gtop + 14f + rh * (idx / 7) + rh / 2
+                    val isToday = day == d.dayOfMonth
+                    if (isToday) circle(cx, cy, min(rh, cw) / 2 - 1f, fill(p.acc))
+                    text(day.toString(), cx, cy + 4f, 12f, uiFace(if (isToday) 600 else 400), if (isToday) p.accOnBtn else if (day < d.dayOfMonth) p.mut else p.fg, align = C)
+                }
+            }
+            else -> {
+                if (showLabel) label(ttl(dow), pad, pad + 11.5f, W - 2 * pad - 12f, color = p.acc)
+                circle(W - pad - 4f, pad + 7f, 4f, fill(p.acc))
+                val sz = fitNum(d.dayOfMonth.toString(), min(H * 0.48f, 76f), W - 2 * pad)
+                num(d.dayOfMonth.toString(), pad, H - pad - 26f, sz)
+                small("$mon ${d.year}", pad, H - pad - 2f, p.fg, 13f, weight = 500)
+            }
+        }
+    }
+
+    /* ---------- Moon ---------- */
+
+    /** Days since a known new moon, as a fraction of the cycle (0 new, 0.5 full). */
+    private fun moonAge(): Double {
+        val days = (System.currentTimeMillis() / 86_400_000.0) - 10_962.6 // 2000-01-06 18:14 UTC new moon
+        val f = (days / 29.530588853) % 1.0
+        return if (f < 0) f + 1 else f
+    }
+
+    private fun moonName(a: Double) = when {
+        a < 0.03 || a > 0.97 -> "New moon"
+        a < 0.22 -> "Waxing crescent"
+        a < 0.28 -> "First quarter"
+        a < 0.47 -> "Waxing gibbous"
+        a < 0.53 -> "Full moon"
+        a < 0.72 -> "Waning gibbous"
+        a < 0.78 -> "Last quarter"
+        else -> "Waning crescent"
+    }
+
+    private fun Ctx.moonDisc(cx: Float, cy: Float, r: Float, a: Double) {
+        circle(cx, cy, r, fill(p.soft))
+        val k = cos(2 * PI * a).toFloat()
+        val lit = fill(p.fg)
+        var y = -r
+        val step = 0.6f
+        while (y <= r) {
+            val w = kotlin.math.sqrt(max(0f, r * r - y * y))
+            val (x0, x1) = if (a < 0.5) (w * k) to w else -w to (-w * k)
+            if (x1 > x0) c.drawRect(px(cx + x0), px(cy + y), px(cx + x1), px(cy + y + step + 0.2f), lit)
+            y += step
+        }
+    }
+
+    private fun moon(x: Ctx) = with(x) {
+        val a = moonAge()
+        val toFull = (((0.5 - a) % 1.0 + 1.0) % 1.0 * 29.53).roundToInt()
+        val toNew = (((1.0 - a) % 1.0 + 1.0) % 1.0 * 29.53).roundToInt()
+        val illum = ((1 - cos(2 * PI * a)) / 2 * 100).roundToInt()
+        val next = if (toFull <= toNew) (if (toFull == 0) "Full moon tonight" else "Full moon in ${plural(toFull, "day")}") else (if (toNew == 0) "New moon tonight" else "New moon in ${plural(toNew, "day")}")
+        if (conf.design == "phase") {
+            val r = min(26f, H / 2 - 12f)
+            moonDisc(18f + r, H / 2, r, a)
+            val tx = 18f + 2 * r + 14f
+            label(ttl("Moon · $illum% lit"), tx, H / 2 - 8f, W - tx - 18f)
+            t2(moonName(a), tx, H / 2 + 12f, 17f, maxW = W - tx - 18f)
+            small(next, tx, H / 2 + 28f, maxW = W - tx - 18f)
+            return@with
+        }
+        top("Moon", "$illum%")
+        val r = min((H - below - 52f) / 2, (W - 2 * pad) / 2 - 10f)
+        moonDisc(W / 2, below + 6f + r, r, a)
+        text(moonName(a), pad, H - pad - 18f, 14f, uiFace(600), p.fg, maxW = W - 2 * pad)
+        small(next, pad, H - pad - 2f, maxW = W - 2 * pad)
     }
 
     /* ---------- shared layout bits ---------- */
@@ -205,7 +336,7 @@ object Designs {
 
     private fun subs(x: Ctx) = with(x) {
         val l = subsSorted()
-        if (l.isEmpty()) { empty("Renewals", "Add a subscription in Track"); return@with }
+        if (l.isEmpty()) { empty("Renewals", "Add a subscription in the app"); return@with }
         when (conf.design) {
             "list" -> {
                 top("Upcoming charges", Fmt.money(subsMonthly(), 0) + "/mo")
@@ -284,7 +415,7 @@ object Designs {
 
     private fun counter(x: Ctx) = with(x) {
         val ct = D.counters.firstOrNull { it.id == conf.ref } ?: D.counters.firstOrNull()
-        if (ct == null) { empty("Counter", "Add a counter in Track"); return@with }
+        if (ct == null) { empty("Counter", "Add a counter in the app"); return@with }
         val v = cnt(ct)
         val pct = (v.toFloat() / ct.goal).coerceIn(0f, 1f)
         when (conf.design) {
@@ -335,7 +466,7 @@ object Designs {
 
     private fun streakW(x: Ctx) = with(x) {
         val h = D.habits.firstOrNull { it.id == conf.ref } ?: D.habits.firstOrNull()
-        if (h == null) { empty("Streak", "Add a habit in Track"); return@with }
+        if (h == null) { empty("Streak", "Add a habit in the app"); return@with }
         val st = streak(h)
         val t0 = today()
         val rec = if (st.n >= h.record && st.n > 1) "New best" else "Best ${h.record}"
@@ -417,7 +548,7 @@ object Designs {
 
     private fun paceW(x: Ctx) = with(x) {
         val g = D.goals.firstOrNull { it.id == conf.ref } ?: D.goals.firstOrNull()
-        if (g == null) { empty("Pace", "Add a goal in Track"); return@with }
+        if (g == null) { empty("Pace", "Add a goal in the app"); return@with }
         val r = pace(g)
         val a = r.ahead.roundToInt()
         val stTxt = if (a <= -1) plural(-a, "day") + " behind" else if (a >= 1) plural(a, "day") + " ahead" else "On track"
@@ -462,7 +593,7 @@ object Designs {
     private fun countdown(x: Ctx) = with(x) {
         if (conf.design == "stack") {
             val rows = D.dates.map { it to dateNext(it) }.filter { it.second.days >= 0 }.sortedBy { it.second.days }.take(3)
-            if (rows.isEmpty()) { empty("Coming up", "Add a date in Track"); return@with }
+            if (rows.isEmpty()) { empty("Coming up", "Add a date in the app"); return@with }
             top("Coming up")
             var y = pad + 26f
             var nx = pad + 56f
@@ -478,7 +609,7 @@ object Designs {
             return@with
         }
         val d = D.dates.firstOrNull { it.id == conf.ref } ?: D.dates.firstOrNull()
-        if (d == null) { empty("Countdown", "Add a date in Track"); return@with }
+        if (d == null) { empty("Countdown", "Add a date in the app"); return@with }
         val n = dateNext(d)
         val span = if (d.yearly) 365 else max(n.days, 1) + 30
         val prog = (1f - n.days.toFloat() / span).coerceIn(0f, 1f)
@@ -579,7 +710,7 @@ object Designs {
 
     private fun clock(x: Ctx) = with(x) {
         val l = D.clocks
-        if (l.isEmpty()) { empty("World clock", "Add a city in Track"); return@with }
+        if (l.isEmpty()) { empty("World clock", "Add a city in the app"); return@with }
         when (conf.design) {
             "analog" -> {
                 top("World clock")
@@ -641,7 +772,7 @@ object Designs {
 
     private fun next(x: Ctx) = with(x) {
         val nu = nextUp()
-        if (nu == null) { empty("Next up", "Add your schedule in Track"); return@with }
+        if (nu == null) { empty("Next up", "Add your schedule in the app"); return@with }
         if (conf.design == "today") {
             val now = LocalTime.now(); val m = now.hour * 60 + now.minute
             val rest = daySched(dayIndex()).filter { mins(it.e) > m }.take(4)
@@ -676,7 +807,7 @@ object Designs {
     /* ---------- Attendance ---------- */
 
     private fun attendance(x: Ctx) = with(x) {
-        if (D.subjects.isEmpty()) { empty("Attendance", "Add classes in Track"); return@with }
+        if (D.subjects.isEmpty()) { empty("Attendance", "Add classes in the app"); return@with }
         when (conf.design) {
             "single" -> {
                 val s = subjectBy(conf.ref) ?: D.subjects.minByOrNull { att(it).p }!!

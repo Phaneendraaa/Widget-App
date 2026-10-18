@@ -54,6 +54,10 @@ import com.phani.widgets.core.Counter
 import com.phani.widgets.core.DateItem
 import com.phani.widgets.core.Fmt
 import com.phani.widgets.core.Habit
+import com.phani.widgets.core.Goal
+import com.phani.widgets.core.Note
+import com.phani.widgets.core.SchedItem
+import com.phani.widgets.core.Subject
 import com.phani.widgets.core.Sub
 import com.phani.widgets.core.WClock
 import com.phani.widgets.core.WConf
@@ -84,6 +88,8 @@ object Create {
             "countdown" -> if (d.id == "stack") null else uid().also { id -> AppStore.change { dates.add(DateItem(id, "", today().plusDays(30).toString(), false)) } }
             "streak" -> uid().also { id -> AppStore.change { habits.add(Habit(id, "", 0, 1, mutableSetOf(), mutableSetOf())) } }
             "counter" -> uid().also { id -> AppStore.change { counters.add(Counter(id, "", "glasses", 8, mutableMapOf())) } }
+            "pace" -> uid().also { id -> AppStore.change { goals.add(Goal(id, "", "pages", 100.0, 0.0, today().toString(), today().plusDays(30).toString(), 5.0)) } }
+            "note" -> uid().also { id -> AppStore.change { notes.add(Note(id, "")) } }
             else -> null
         }
         madeRef = ref
@@ -105,7 +111,7 @@ object Create {
     fun close() {
         // a new widget left without saving leaves nothing behind
         val r = madeRef
-        if (r != null && AppStore.data.placed.none { it.ref == r }) AppStore.change { dates.removeAll { it.id == r }; habits.removeAll { it.id == r }; counters.removeAll { it.id == r } }
+        if (r != null && AppStore.data.placed.none { it.ref == r }) AppStore.change { dates.removeAll { it.id == r }; habits.removeAll { it.id == r }; counters.removeAll { it.id == r }; goals.removeAll { it.id == r }; notes.removeAll { it.id == r } }
         madeRef = null; open = false; conf = null; bindId = -1; adding = false
     }
 
@@ -113,7 +119,7 @@ object Create {
         AppStore.change(true) {
             placed.removeAll { it.id == c.id }
             val r = c.ref
-            if (r != null && placed.none { it.ref == r }) { dates.removeAll { it.id == r }; habits.removeAll { it.id == r }; counters.removeAll { it.id == r } }
+            if (r != null && placed.none { it.ref == r }) { dates.removeAll { it.id == r }; habits.removeAll { it.id == r }; counters.removeAll { it.id == r }; goals.removeAll { it.id == r }; notes.removeAll { it.id == r } }
         }
         open = false; conf = null; adding = false
         Toaster.show("Widget deleted", true)
@@ -129,6 +135,8 @@ fun widgetName(c: WConf): String {
         "streak" -> d.habits.firstOrNull { it.id == c.ref }?.name?.ifBlank { null } ?: "Streak"
         "counter" -> d.counters.firstOrNull { it.id == c.ref }?.name?.ifBlank { null } ?: "Counter"
         "clock" -> d.clocks.take(if (c.design == "pair") 2 else 3).joinToString(" · ") { it.city }.ifBlank { "World clock" }
+        "pace" -> d.goals.firstOrNull { it.id == c.ref }?.name?.ifBlank { null } ?: "Pace"
+        "note" -> d.notes.firstOrNull { it.id == c.ref }?.text?.lineSequence()?.firstOrNull()?.take(30)?.ifBlank { null } ?: "Note"
         else -> Catalog.type(c.type).name
     }
 }
@@ -279,6 +287,10 @@ private fun infoOk(c: WConf): Boolean {
         "spend" -> d.budget > 0
         "subs" -> d.subs.isNotEmpty()
         "clock" -> d.clocks.isNotEmpty()
+        "pace" -> d.goals.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
+        "note" -> d.notes.firstOrNull { it.id == c.ref }?.text?.isNotBlank() == true
+        "next" -> d.sched.values.any { it.isNotEmpty() }
+        "attendance" -> d.subjects.isNotEmpty()
         else -> true
     }
 }
@@ -290,6 +302,15 @@ private fun infoQuestion(c: WConf) = when (c.type) {
     "spend" -> "What's your monthly budget?"
     "subs" -> "Which subscriptions do you pay?"
     "clock" -> "Which cities?"
+    "fast" -> "Your fasting goal"
+    "pace" -> "What's your goal?"
+    "year" -> "Nothing to fill in"
+    "today" -> "Nothing to fill in"
+    "moon" -> "Nothing to fill in"
+    "note" -> "What should it say?"
+    "next" -> "Your weekly schedule"
+    "attendance" -> "Your classes"
+    "now" -> "Nothing to fill in"
     else -> "Your details"
 }
 
@@ -299,6 +320,14 @@ private fun infoSub(c: WConf): String? = when (c.type) {
     "spend" -> "Shows what you can spend today so the month lasts."
     "subs" -> "Shows the next charge before it hits."
     "clock" -> "Pick up to 3. The Wide size shows two."
+    "fast" -> "Start and end your fast with one tap on the widget."
+    "pace" -> "Shows what you need each day to hit it, and whether you're ahead."
+    "year" -> "It works out how much of the year, month, week and day is gone."
+    "today" -> "It shows today's date and updates at midnight."
+    "moon" -> "It works out tonight's moon phase on your phone."
+    "next" -> "Shows what's next and how long until it starts."
+    "attendance" -> "Shows how many classes you can miss, or must attend."
+    "now" -> "It looks across your other widgets and shows the one thing that needs you."
     else -> null
 }
 
@@ -313,6 +342,11 @@ private fun InfoFields(c: WConf) {
             "spend" -> SpendInfo()
             "subs" -> SubsInfo()
             "clock" -> ClockInfo()
+            "fast" -> FastInfo()
+            "pace" -> PaceInfo(c)
+            "note" -> NoteInfo(c)
+            "next" -> SchedInfo()
+            "attendance" -> ClassesInfo()
         }
     }
 }
@@ -322,6 +356,9 @@ private fun hint(c: WConf) = when (c.type) {
     "subs" -> "Add a subscription above"
     "clock" -> "Pick a city above"
     "countdown" -> if (c.design == "stack") "Make a countdown first" else "Give it a name above"
+    "note" -> "Write your note above"
+    "next" -> "Add something to your schedule"
+    "attendance" -> "Add a class above"
     else -> "Give it a name above"
 }
 
