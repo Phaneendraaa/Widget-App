@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Widgets</string>
-    <string name="widget_name">Birthday Countdown</string>
-    <string name="widget_desc">Days left until your birthday</string>
+    <string name="app_name">Countdown Widgets</string>
+    <string name="widget_name">Countdown</string>
+    <string name="widget_desc">Your own countdown, in your style</string>
 </resources>

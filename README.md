@@ -1,11 +1,10 @@
-# Widget-app
+# Widget-App
 
-Android home-screen widgets, built in small steps.
+Countdown widget maker for Android. Create a countdown (name + date), pick a style, save, and add it to your home screen (or lock screen where your phone allows it).
 
-## Widgets
-- **Birthday Countdown** — days left until 25 Dec (rolls to next year after it passes).
+Styles: Black & Yellow, Minimal, Blue.
 
 ## Download
-Latest APK: https://github.com/Phaneendraaa/Widget-App/releases/latest/download/widget-app.apk
+https://github.com/Phaneendraaa/Widget-App/releases/latest/download/widget-app.apk
 
 Every push to `main` builds the APK on GitHub Actions and replaces the `latest` release.
