@@ -32,10 +32,13 @@ fun AppShell() {
     val p = pal()
     AppStore.rev
     ClockTicker()
+    // each tab keeps its own scroll position
+    val scrolls = androidx.compose.runtime.remember { mutableMapOf<String, androidx.compose.foundation.ScrollState>() }
+    val scroll = scrolls.getOrPut(Nav.screen) { androidx.compose.foundation.ScrollState(0) }
     Box(Modifier.fillMaxSize().background(p.paper)) {
         if (Nav.screen != "home") BackHandler { Nav.screen = "home" }
         Column(
-            Modifier.fillMaxSize().verticalScroll(androidx.compose.runtime.key(Nav.screen) { rememberScrollState() })
+            Modifier.fillMaxSize().verticalScroll(scroll)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = Pad)
                 .padding(top = 8.dp, bottom = 120.dp),
