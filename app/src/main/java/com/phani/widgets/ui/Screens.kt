@@ -3,6 +3,7 @@ package com.phani.widgets.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,7 +65,7 @@ fun HomeScreen() {
     val edit = HomeState.edit
     val ctx = androidx.compose.ui.platform.LocalContext.current
     ClockTicker()
-    TopBar("Home", if (edit) "Tap + to put a widget on your real home screen." else "Live widgets. Tap the buttons on them.") {
+    TopBar("Home", if (edit) "Tap a widget to restyle it. + puts it on your phone." else "Live widgets. Tap the buttons on them.") {
         ChipButton(if (edit) "Done" else "Edit", solid = edit, icon = if (edit) null else Ic.brush) { HomeState.edit = !edit }
     }
     val (wbg, wfg) = wall()
@@ -92,7 +93,7 @@ fun HomeScreen() {
                         val conf = d.placed[i]
                         val full = conf.size != "s"
                         Box(if (full) Modifier.fillMaxWidth() else Modifier.weight(1f)) {
-                            WidgetView(conf, live = !edit, onTap = { if (edit) Toaster.show("Restyling arrives with the customise build") }) { runHit(it) }
+                            WidgetView(conf, live = !edit, onTap = { if (edit) Sheets.customEdit(i) }) { runHit(it) }
                             if (edit) Row(Modifier.align(Alignment.TopEnd).padding(top = 0.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 EditDot(Ic.plus) {
                                     if (!com.phani.widgets.widget.Widgets.requestPin(ctx, conf)) Toaster.show("Long-press your home screen, tap Widgets, then pick Widget App")
@@ -139,10 +140,71 @@ private fun EditDot(icon: androidx.compose.ui.graphics.vector.ImageVector, onCli
     }
 }
 
+object GalleryState { var cat by mutableStateOf("all") }
+
 @Composable
 fun GalleryScreen() {
-    TopBar("Widgets", "12 widgets · 39 designs · all offline")
-    EmptyCard("The gallery is next", "Widget designs, looks and the customise screen land in the next builds.")
+    val p = pal()
+    val d = AppStore.data
+    TopBar("Widgets", "${com.phani.widgets.core.Catalog.types.size} widgets · ${com.phani.widgets.core.Catalog.totalDesigns} designs · all offline") {
+        if (d.pro) Pill("Pro", "good") else ChipButton("Get Pro", solid = true) { Sheets.showPaywall() }
+    }
+    Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.phani.widgets.core.Catalog.cats.forEach { (k, l) ->
+            val on = GalleryState.cat == k
+            Box(Modifier.height(38.dp).clip(RoundedCornerShape(19.dp)).background(if (on) p.ink else Color.Transparent)
+                .then(if (on) Modifier else Modifier.border(1.dp, p.line, RoundedCornerShape(19.dp))).clickable { GalleryState.cat = k }.padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted) }
+        }
+    }
+    val items = com.phani.widgets.core.Catalog.types.filter { GalleryState.cat == "all" || it.cat == GalleryState.cat }
+    if (GalleryState.cat == "all") {
+        Spacer(Modifier.height(18.dp))
+        val r = com.phani.widgets.core.rightNow()
+        Hero("ONLY IN WIDGET APP", "One widget that knows what needs you.", "Right now it would say: \u201c${r.h}\u201d.") { Sheets.customNew("now") }
+    }
+    Spacer(Modifier.height(18.dp))
+    val (wbg, _) = wall()
+    // two-column layout: small designs pair up, wide ones take the row
+    val rows = mutableListOf<List<com.phani.widgets.core.TypeDef>>()
+    var half: com.phani.widgets.core.TypeDef? = null
+    items.forEach { t ->
+        if (t.designs[0].size == "s") { if (half == null) half = t else { rows.add(listOf(half!!, t)); half = null } }
+        else rows.add(listOf(t))
+    }
+    if (half != null) rows.add(listOf(half!!))
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        rows.forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                row.forEach { t ->
+                    val dd = t.designs[0]
+                    val conf = com.phani.widgets.core.WConf("g" + t.type, t.type, dd.id, dd.size, ref = com.phani.widgets.core.Catalog.defaultRef(t.type))
+                    Column(Modifier.weight(1f).clip(CardR).background(p.card).clickable { Sheets.customNew(t.type) }.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(wbg).padding(12.dp)) {
+                            WidgetView(conf, live = false, onTap = { Sheets.customNew(t.type) })
+                        }
+                        Text(t.name, style = T.bodyB, color = p.ink, modifier = Modifier.padding(horizontal = 6.dp))
+                        Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("${t.designs.size} designs", style = T.small.copy(fontSize = 12.sp), color = p.muted, modifier = Modifier.weight(1f))
+                            if (t.isNew) Badge("NEW", true)
+                            if (t.isNew && t.pro) Spacer(Modifier.size(6.dp))
+                            if (t.pro) Badge("PRO", false)
+                        }
+                    }
+                }
+                if (row.size == 1 && row[0].designs[0].size == "s") Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun Badge(t: String, new: Boolean) {
+    val p = pal()
+    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(if (new) Signal else p.ink).padding(horizontal = 7.dp, vertical = 3.dp)) {
+        Text(t, style = T.label.copy(fontSize = 10.sp), color = if (new) Color(0xFF1A0A02) else p.paper)
+    }
 }
 
 @Composable
@@ -158,7 +220,7 @@ fun SettingsScreen() {
     TopBar("Settings", "Works offline. Nothing leaves your phone.")
     if (d.pro) Hero("PRO · LIFETIME", "Everything unlocked. Thank you.")
     else Hero("WIDGET APP PRO", "Every design, every style, unlimited widgets.", "${CUR[d.cur]?.pro ?: "$9.99"} once. No subscription.") {
-        Toaster.show("Pro unlock arrives in a later build")
+        Sheets.showPaywall()
     }
 
     SectionTitle("App appearance")

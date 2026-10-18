@@ -65,6 +65,7 @@ fun AppShell() {
             }
             PillNav()
         }
+        SheetHost()
     }
 }
 
