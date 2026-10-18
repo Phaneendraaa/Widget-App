@@ -16,6 +16,15 @@ object AppStore {
         private set
     private var file: File? = null
     private var undoSnap: String? = null
+    /** When the last undoable change happened, and on which widget it was tapped (for its Undo button). */
+    var undoAt = 0L
+        private set
+    var undoCid: String? = null
+        private set
+    /** Set by [Actions] just before a change, so the change knows which widget it came from. */
+    var pendingCid: String? = null
+    private var undoFile: File? = null
+    const val UNDO_MS = 12_000L
     private var loaded = false
 
     fun load(ctx: Context) {
@@ -33,6 +42,13 @@ object AppStore {
             emptyData(guessCurrency())
         }
         loaded = true
+        undoFile = File(ctx.applicationContext.filesDir, "undo.json")
+        try {
+            val u = undoFile?.takeIf { it.exists() }?.let { JSONObject(it.readText()) }
+            if (u != null && System.currentTimeMillis() - u.getLong("t") < 60_000) {
+                undoSnap = u.getString("snap"); undoAt = u.getLong("t"); undoCid = if (u.isNull("cid")) null else u.getString("cid")
+            }
+        } catch (_: Exception) {}
         save()
     }
 
@@ -50,7 +66,11 @@ object AppStore {
 
     /** Apply a change, save it, and refresh every screen. [undoable] keeps a snapshot for Undo. */
     fun change(undoable: Boolean = false, block: AppData.() -> Unit) {
-        if (undoable) undoSnap = data.toJson().toString()
+        if (undoable) {
+            undoSnap = data.toJson().toString(); undoAt = System.currentTimeMillis(); undoCid = pendingCid
+            try { undoFile?.writeText(JSONObject().put("t", undoAt).put("cid", undoCid ?: JSONObject.NULL).put("snap", undoSnap).toString()) } catch (_: Exception) {}
+        }
+        pendingCid = null
         data.block()
         save()
         rev++
@@ -59,10 +79,14 @@ object AppStore {
 
     fun canUndo() = undoSnap != null
 
+    /** True while the widget with this id should show its Undo button. */
+    fun undoShownOn(cid: String?): Boolean = cid != null && undoSnap != null && cid == undoCid && System.currentTimeMillis() - undoAt < UNDO_MS
+
     fun undo(): Boolean {
         val s = undoSnap ?: return false
         data = appDataFrom(JSONObject(s))
-        undoSnap = null
+        undoSnap = null; undoAt = 0L; undoCid = null
+        try { undoFile?.delete() } catch (_: Exception) {}
         save()
         rev++
         onChanged?.invoke()

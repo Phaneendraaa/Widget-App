@@ -220,6 +220,14 @@ class Ctx(val c: Canvas, val wPx: Float, val hPx: Float, val k: Float, val p: WP
         hits.add(Hit(RectF(px(x), px(y), px(x + w), px(y + h)), act, id, value))
     }
 
+    /** A small Undo pill in the top-right corner, shown for a few seconds after a tap changed something. */
+    fun undoButton() {
+        val w = 70f; val h = 30f
+        val x = W - pad - w + 4f; val y = max(4f, pad - 8f)
+        rrect(x - 3f, y - 3f, w + 6f, h + 6f, (h + 6f) / 2, fill(p.bg or 0xFF000000.toInt()))
+        button(x, y, w, h, "solid", "undo", text = "Undo")
+    }
+
     fun hitArea(x: Float, y: Float, w: Float, h: Float, act: String, id: String? = null) {
         hits.add(Hit(RectF(px(x), px(y), px(x + w), px(y + h)), act, id))
     }
@@ -227,6 +235,7 @@ class Ctx(val c: Canvas, val wPx: Float, val hPx: Float, val k: Float, val p: WP
 
 object Paths {
     val plus = listOf("M12 5v14", "M5 12h14")
+    val minus = listOf("M5 12h14")
     val check = listOf("M5 12.5l4.5 4.5L19 7.5")
     val x = listOf("M6 6l12 12", "M18 6L6 18")
     val play = listOf("M8 5.5v13l10-6.5z")
@@ -276,6 +285,7 @@ private fun draw(conf: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
         c.drawRoundRect(RectF(0.5f * density, 0.5f * density, wPx - 0.5f * density, hPx - 0.5f * density), r * density, r * density, s)
     }
     try { Designs.draw(ctx) } catch (e: Exception) { ctx.small("Couldn't draw this widget", 16f, 30f) }
+    if (!AppStore.previewing && AppStore.undoShownOn(conf.id)) ctx.undoButton()
     c.restore()
     return Rendered(bmp, ctx.hits)
 }

@@ -69,8 +69,10 @@ abstract class BaseWidget : AppWidgetProvider() {
                         .putExtra("open", act).putExtra("cid", intent.getStringExtra("cid")))
                     return
                 }
-                Actions.run(act, intent.getStringExtra("id"), intent.getStringExtra("value"))
+                val r = Actions.run(act, intent.getStringExtra("id"), intent.getStringExtra("value"), intent.getStringExtra("cid"))
                 Widgets.updateAll(context)
+                // take the Undo button away again once its time is up
+                if (r.undo && r.msg != null) Widgets.refreshSoon(context, AppStore.UNDO_MS + 500)
             }
             ACT_PINNED -> {
                 Widgets.prepare(context)
@@ -106,6 +108,16 @@ object Widgets {
         providers.forEach { (cls, size) ->
             m.getAppWidgetIds(ComponentName(ctx, cls)).forEach { render(ctx, m, it, size) }
         }
+    }
+
+    /** Redraw every widget after [ms], to clear an Undo button. */
+    fun refreshSoon(ctx: Context, ms: Long) {
+        val app = ctx.applicationContext
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ updateAll(app) }, ms)
+        val am = app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val pi = PendingIntent.getBroadcast(app, 11, Intent(app, CountdownWidget::class.java).setAction(ACT_TICK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        am.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + ms, pi)
     }
 
     /** Widget ids that really exist on the home screen right now. */
@@ -185,9 +197,18 @@ object Widgets {
         }
         for (i in CELLS.indices) {
             val h = assigned[i]
-            val intent = Intent(ctx, providerFor(size)).setAction(ACT_TAP)
-                .putExtra("act", h?.act ?: "open").putExtra("id", h?.id).putExtra("value", h?.value).putExtra("cid", conf.id)
-            val pi = PendingIntent.getBroadcast(ctx, id * 100 + i, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val act = h?.act ?: "open"
+            val pi = if (act == "open" || act == "spend-open") {
+                val open = Intent(ctx, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    .setData(android.net.Uri.parse("widget://$id/$i")) // keeps each cell's intent distinct
+                    .putExtra("open", act).putExtra("cid", conf.id)
+                PendingIntent.getActivity(ctx, id * 100 + i, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            } else {
+                val intent = Intent(ctx, providerFor(size)).setAction(ACT_TAP)
+                    .putExtra("act", act).putExtra("id", h?.id).putExtra("value", h?.value).putExtra("cid", conf.id)
+                PendingIntent.getBroadcast(ctx, id * 100 + i, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            }
             rv.setOnClickPendingIntent(CELLS[i], pi)
         }
         m.updateAppWidget(id, rv)

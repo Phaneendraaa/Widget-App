@@ -72,6 +72,12 @@ class ScreensTest {
             Nav.screen = "mine"
         }
         shot("My widgets")
+        step {
+            val cid = uid()
+            AppStore.change { counters.add(com.phani.widgets.core.Counter("cw", "Water", "glasses", 8, mutableMapOf())); placed.add(0, WConf(cid, "counter", "glass", "s", ref = "cw")) }
+            com.phani.widgets.core.Actions.run("cnt", "cw", null, cid)
+        }
+        shot("After +1: Undo on widget")
         step { Nav.screen = "home"; Create.startFrom("subs", "next") }; shot("Editor, renewals")
         step { Create.close(); Create.startFrom("clock", "pair") }; shot("Editor, clock")
         step { Create.close(); Create.startFrom("note", "sticky") }; shot("Editor, note")

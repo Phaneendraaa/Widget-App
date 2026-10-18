@@ -392,8 +392,8 @@ object Designs {
                 val w = num(if (f.on) floor(f.h).toInt().toString() else "0", pad, base, sz)
                 text("h " + (if (f.on) ((f.h % 1) * 60).toInt().toString().padStart(2, '0') else "00") + "m", pad + w + 4f, base - 2f, 15f, uiFace(500), p.fg)
                 bar(pad, base + 10f, W - 2 * pad, 3f, f.pct.toFloat(), p.acc)
-                small(if (!f.on) "Tap to start a ${f.target}h fast" else if (f.h >= f.target) "Goal reached" else "Goal ${f.target}h · " + Fmt.at(f.endMs), pad, H - pad - 2f, maxW = W - 2 * pad)
-                hitArea(0f, 0f, W, H, "fast")
+                small(if (!f.on) "Ready for a ${f.target}h fast" else if (f.h >= f.target) "Goal reached" else "Goal ${f.target}h · " + Fmt.at(f.endMs), pad, H - pad - 2f, maxW = W - 2 * pad)
+                button(W - pad - 34f, pad - 6f, 34f, 34f, if (f.on) "ghost" else "solid", "fast", ic = if (f.on) Paths.stop else Paths.play, icFilled = true, icSize = 13f)
             }
             else -> {
                 top(if (f.on) "Fasting" else "Fast", "${f.target}h")
@@ -420,9 +420,10 @@ object Designs {
         val pct = (v.toFloat() / ct.goal).coerceIn(0f, 1f)
         when (conf.design) {
             "dots" -> {
-                val lw = wideLeft(66f)
+                val lw = wideLeft(66f + 46f)
                 label(ttl(ct.name), 18f, 26f, lw - 40f)
                 small("$v/${ct.goal}", 18f + lw, 26f, align = R)
+                button(W - 18f - 52f - 46f, H / 2 - 18f, 36f, 36f, "ghost", "cnt-", ct.id, ic = Paths.minus, icSize = 14f)
                 val per = max(1, ((lw + 5f) / 19f).toInt())
                 for (i in 0 until ct.goal) {
                     val row = i / per; val col = i % per
@@ -432,20 +433,20 @@ object Designs {
             }
             "big" -> {
                 top(ct.name, "of ${ct.goal}")
+                val bh = min(34f, H * 0.22f); val btnY = H - pad - bh
                 val sz = clampSz(46f, 0.38f, 74f, W)
-                val base = H - pad - 26f
-                bigWithUnit(v.toString(), ct.unit, base, sz, if (v >= ct.goal) p.acc else p.fg, below + 4f)
-                small(if (v >= ct.goal) "Goal reached" else "Tap the number to add 1", pad, H - pad - 2f, maxW = W - 2 * pad)
-                hitArea(0f, pad + 18f, W, H - pad - 40f, "cnt", ct.id)
+                bigWithUnit(v.toString(), ct.unit, btnY - 10f, sz, if (v >= ct.goal) p.acc else p.fg, below + 4f)
+                countButtons(ct.id, btnY, bh)
             }
             else -> {
                 top(ct.name, "$v/${ct.goal}")
-                val gh = min(58f, H - pad - 22f - below - 8f).coerceAtLeast(30f); val gw = gh * 54f / 58f
+                val bh = min(34f, H * 0.22f); val btnY = H - pad - bh
+                val gh = min(58f, btnY - 8f - below - 4f).coerceAtLeast(26f); val gw = gh * 54f / 58f
                 val gfs = min(34f, gh * 0.6f)
                 val nw = numW(v.toString(), gfs)
                 val total = gw + 12f + nw
                 val gx = W / 2 - total / 2
-                val gy = (below + H - pad - 18f) / 2 - gh / 2
+                val gy = (below + btnY - 6f) / 2 - gh / 2
                 val glass = Path().apply {
                     moveTo(px(gx + gw * 0.11f), px(gy + 4f)); lineTo(px(gx + gw * 0.89f), px(gy + 4f)); lineTo(px(gx + gw * 0.8f), px(gy + gh - 2f))
                     lineTo(px(gx + gw * 0.2f), px(gy + gh - 2f)); close()
@@ -456,10 +457,16 @@ object Designs {
                 c.restore()
                 c.drawPath(glass, stroke(p.fg, 2f).apply { strokeJoin = Paint.Join.ROUND })
                 num(v.toString(), gx + gw + 12f, gy + gh / 2 + cap(gfs) / 2, gfs)
-                small("Tap to add 1", W / 2, H - pad - 2f, align = C)
-                hitArea(0f, pad + 18f, W, H - pad - 18f, "cnt", ct.id)
+                countButtons(ct.id, btnY, bh)
             }
         }
+    }
+
+    /** − and +1 side by side: a deliberate tap, never "touch anywhere". */
+    private fun Ctx.countButtons(id: String, y: Float, h: Float) {
+        val mw = 44f
+        button(pad, y, mw, h, "ghost", "cnt-", id, ic = Paths.minus, icSize = 13f)
+        button(pad + mw + 6f, y, W - 2 * pad - mw - 6f, h, "solid", "cnt", id, text = "+1")
     }
 
     /* ---------- Streak ---------- */
@@ -508,16 +515,17 @@ object Designs {
                 }
             }
             "big" -> {
-                top("${h.name} · $rec")
+                if (showLabel) label(ttl("${h.name} · $rec"), pad, pad + 11.5f, W - 2 * pad - 44f)
+                button(W - pad - 36f, pad - 6f, 36f, 36f, if (st.today) "ghost" else "acc", "hab", h.id, ic = Paths.check)
                 val sz = clampSz(44f, 0.36f, 70f, W)
                 val base = H - pad - 26f
-                bigWithUnit(st.n.toString(), "days", base, sz, topLimit = below + 4f)
+                bigWithUnit(st.n.toString(), "days", base, sz, topLimit = below + 14f)
                 dots(pad, H - pad - 6f, 11f, 4f)
-                hitArea(0f, pad + 18f, W, H - pad - 40f, "hab", h.id)
             }
             "ring" -> {
                 top(h.name)
-                val rs = min(88f, H - pad - 16f - below - 6f)
+                val bh = min(30f, H * 0.2f)
+                val rs = min(88f, H - pad - bh - 8f - below - 2f)
                 val cy = below + rs / 2
                 val r = rs / 2 - 4.5f
                 val segDeg = 360f / 7
@@ -530,8 +538,7 @@ object Designs {
                 }
                 num(st.n.toString(), W / 2, cy + 6f, 26f, align = C)
                 small("days", W / 2, cy + 19f, size = 10f, align = C)
-                small(if (st.today) "Done today" else "Tap to check in", W / 2, H - pad - 2f, align = C)
-                hitArea(0f, pad + 18f, W, H - pad - 18f, "hab", h.id)
+                button(pad, H - pad - bh, W - 2 * pad, bh, if (st.today) "ghost" else "acc", "hab", h.id, text = if (st.today) "Done today" else "Check in", ic = Paths.check, icSize = 13f)
             }
             else -> {
                 val lw = wideLeft(44f + 14f + 7 * 15f + 14f)
@@ -574,7 +581,8 @@ object Designs {
                 small(" · ${r.left}d", pad + w, H - pad - 2f, p.fg, maxW = W - 2 * pad - w)
             }
             else -> {
-                top(g.name)
+                if (showLabel) label(ttl(g.name), pad, pad + 11.5f, W - 2 * pad - 40f)
+                button(W - pad - 32f, pad - 6f, 32f, 32f, "solid", "goal", g.id, ic = Paths.plus, icSize = 14f)
                 val rs = min(48f, H - pad - 38f - below - 4f)
                 val cy = below + 2f + rs / 2
                 ring(pad + rs / 2, cy, rs, 6f, r.pct.toFloat(), if (a <= -1) p.acc else p.fg)
@@ -583,7 +591,6 @@ object Designs {
                 num(pt, pad + rs + 12f, cy + cap(pfs) / 2, pfs)
                 text("$per a day", pad, H - pad - 18f, 12.5f, uiFace(600), p.fg, maxW = W - 2 * pad)
                 small(stTxt, pad, H - pad - 2f, stCol, weight = 600, maxW = W - 2 * pad)
-                hitArea(0f, pad + 18f, W, H - pad - 50f, "goal", g.id)
             }
         }
     }

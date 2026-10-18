@@ -7,8 +7,9 @@ class ActResult(val msg: String?, val undo: Boolean = true, val openSpend: Boole
 
 /** Runs the same actions as the prototype. Used by the in-app widgets and by real home-screen widgets. */
 object Actions {
-    fun run(act: String, id: String?, value: String?): ActResult {
+    fun run(act: String, id: String?, value: String?, cid: String? = null): ActResult {
         val d = AppStore.data
+        AppStore.pendingCid = cid
         val k = today().toString()
         when (act) {
             "spend-q" -> {
@@ -17,6 +18,13 @@ object Actions {
                 return ActResult("Logged ${Fmt.money(v)} · ${Fmt.money(spendState().left)} left today")
             }
             "spend-open" -> return ActResult(null, false, openSpend = true)
+            "undo" -> return ActResult(if (AppStore.undo()) "Undone" else null, false)
+            "cnt-" -> {
+                val c = d.counters.firstOrNull { it.id == id } ?: return ActResult(null)
+                if ((c.log[k] ?: 0) <= 0) return ActResult(null, false)
+                AppStore.change(true) { c.log[k] = maxOf(0, (c.log[k] ?: 0) - 1) }
+                return ActResult("${c.name}: ${c.log[k]} of ${c.goal}")
+            }
             "fast" -> {
                 return if (d.fast.start != null) {
                     val h = (System.currentTimeMillis() - d.fast.start!!) / 3_600_000.0

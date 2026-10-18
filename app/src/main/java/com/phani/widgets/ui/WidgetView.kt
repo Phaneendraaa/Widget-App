@@ -47,6 +47,8 @@ fun WidgetView(conf: WConf, modifier: Modifier = Modifier, live: Boolean = true,
         val wDp = maxWidth.value
         val hDp = preferredHeight(conf, wDp)
         val density = LocalDensity.current.density
+        // redraw once the Undo button's time is up
+        if (!sample && AppStore.undoShownOn(conf.id)) LaunchedEffect(rev) { delay(AppStore.UNDO_MS - (System.currentTimeMillis() - AppStore.undoAt) + 300); Clock.tick++ }
         val r = remember(conf, rev, tick, wDp, hDp, AppStore.data.wall, sample) {
             renderWidget(conf, (wDp * density).toInt(), (hDp * density).toInt(), density, sample)
         }

@@ -43,8 +43,9 @@ import com.phani.widgets.core.WConf
 import com.phani.widgets.widget.Hit
 import com.phani.widgets.widget.Widgets
 
-fun runHit(hit: Hit) {
-    val r = Actions.run(hit.act, hit.id, hit.value)
+fun runHit(hit: Hit, cid: String? = null) {
+    if (hit.act == "open") return
+    val r = Actions.run(hit.act, hit.id, hit.value, cid)
     if (r.openSpend) { TrackState.open("spend"); return }
     if (r.msg != null) Toaster.show(r.msg, r.undo)
 }
@@ -214,7 +215,7 @@ private fun WidgetCard(c: WConf) {
     val (wbg, _) = wall()
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).clickable { Create.startEdit(c) }) {
         Box(Modifier.fillMaxWidth().background(wbg).padding(14.dp), contentAlignment = Alignment.Center) {
-            WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = true, onTap = { Create.startEdit(c) }) { runHit(it) }
+            WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = true, onTap = { Create.startEdit(c) }) { runHit(it, c.id) }
         }
         Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
