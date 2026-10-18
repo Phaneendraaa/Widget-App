@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         AppStore.load(this)
         Fonts.init(assets)
+        com.phani.widgets.widget.WFonts.init(assets)
         setContent {
             AppStore.rev
             val mode = AppStore.data.theme

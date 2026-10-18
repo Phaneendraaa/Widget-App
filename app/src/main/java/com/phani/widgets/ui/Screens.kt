@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,12 +47,24 @@ val WALLS = linkedMapOf(
 
 fun wall() = WALLS[AppStore.data.wall] ?: WALLS.getValue("stone")
 
+object HomeState {
+    var edit by mutableStateOf(false)
+}
+
+fun runHit(hit: com.phani.widgets.widget.Hit) {
+    val r = com.phani.widgets.core.Actions.run(hit.act, hit.id, hit.value)
+    if (r.openSpend) { Toaster.show("The spend keypad arrives with the Track build"); return }
+    if (r.msg != null) Toaster.show(r.msg, r.undo)
+}
+
 @Composable
 fun HomeScreen() {
     val p = pal()
     val d = AppStore.data
-    TopBar("Home", "Live widgets. Tap the buttons on them.") {
-        ChipButton("Edit", icon = Ic.brush) { Toaster.show("Editing arrives with the widget designs build") }
+    val edit = HomeState.edit
+    ClockTicker()
+    TopBar("Home", if (edit) "Tap a widget to restyle it." else "Live widgets. Tap the buttons on them.") {
+        ChipButton(if (edit) "Done" else "Edit", solid = edit, icon = if (edit) null else Ic.brush) { HomeState.edit = !edit }
     }
     val (wbg, wfg) = wall()
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(34.dp)).background(wbg).padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 18.dp)) {
@@ -59,15 +72,45 @@ fun HomeScreen() {
             Text(Fmt.now(), style = T.smallB, color = wfg)
             Text(Fmt.full(today()), style = T.smallB, color = wfg)
         }
-        Box(
-            Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(24.dp)).background(wfg.copy(alpha = 0.06f))
-                .border(1.5.dp, wfg.copy(alpha = 0.45f), RoundedCornerShape(24.dp)).clickable { Nav.tab = "gallery" },
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Ic.plus, null, tint = wfg, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.size(8.dp))
-                Text("Add widget", style = T.bodyB, color = wfg)
+        // pack small widgets two per row, wide and large ones full width
+        val rows = mutableListOf<List<Int>>()
+        var pending: Int? = null
+        d.placed.forEachIndexed { i, w ->
+            if (w.size == "s") {
+                if (pending == null) pending = i else { rows.add(listOf(pending!!, i)); pending = null }
+            } else {
+                if (pending != null) { rows.add(listOf(pending!!)); pending = null }
+                rows.add(listOf(i))
+            }
+        }
+        if (pending != null) rows.add(listOf(pending!!))
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            rows.forEach { r ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    r.forEach { i ->
+                        val conf = d.placed[i]
+                        val full = conf.size != "s"
+                        Box(if (full) Modifier.fillMaxWidth() else Modifier.weight(1f)) {
+                            WidgetView(conf, live = !edit, onTap = { if (edit) Toaster.show("Restyling arrives with the customise build") }) { runHit(it) }
+                            if (edit) Row(Modifier.align(Alignment.TopEnd).padding(top = 0.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (i > 0) EditDot(Ic.up) { AppStore.change { val x = placed.removeAt(i); placed.add(i - 1, x) } }
+                                EditDot(Ic.x) { AppStore.change(true) { placed.removeAt(i) }; Toaster.show("Widget removed", true) }
+                            }
+                        }
+                        if (!full && r.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+            Box(
+                Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(24.dp)).background(wfg.copy(alpha = 0.06f))
+                    .border(1.5.dp, wfg.copy(alpha = 0.45f), RoundedCornerShape(24.dp)).clickable { Nav.tab = "gallery" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Ic.plus, null, tint = wfg, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.size(8.dp))
+                    Text("Add widget", style = T.bodyB, color = wfg)
+                }
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 22.dp).height(68.dp).clip(RoundedCornerShape(26.dp)).background(Color.White.copy(alpha = 0.26f)),
@@ -81,6 +124,14 @@ fun HomeScreen() {
     if (d.sampleData) {
         Spacer(Modifier.height(10.dp))
         SampleBanner("Showing example data.", "Make it yours") { Nav.tab = "track" }
+    }
+}
+
+@Composable
+private fun EditDot(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    val p = pal()
+    Box(Modifier.offset(x = 6.dp, y = (-8).dp).size(32.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = p.paper, modifier = Modifier.size(16.dp))
     }
 }
 
