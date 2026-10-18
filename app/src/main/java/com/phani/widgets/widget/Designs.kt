@@ -295,9 +295,9 @@ object Designs {
             }
             "strip" -> {
                 val lw = wideLeft(66f)
-                label(ttl(v.label + " · " + plural(s.days, "day") + " left"), 18f, 24f, lw)
+                label(ttl(v.short + " · " + v.daysLeft), 18f, 24f, lw)
                 num(big, 18f, 50f, 26f, if (over) p.acc else p.fg)
-                small(v.of.substringBefore(" ·").substringBefore(" today"), 18f + lw, 50f, align = R)
+                small(v.of.substringBefore(" today"), 18f + lw, 50f, align = R)
                 bar(18f, 60f, lw, 4f, used, if (over) p.acc else p.fg)
                 button(W - 18f - 52f, H / 2 - 26f, 52f, 52f, "solid", "spend-open", ic = Paths.plus, icSize = 20f)
             }
@@ -306,8 +306,8 @@ object Designs {
                 val nb = pad + 26f + cap(44f)
                 val bw0 = fitNum(big, 44f, W - 2 * pad - 96f)
                 num(big, pad, nb, bw0, if (over) p.acc else p.fg)
-                small("left " + v.of.substringBefore(" ·"), W - pad, nb - 15f, align = R, maxW = 96f)
-                small(if (conf.opt == null || conf.opt == "day") "" else v.of.substringAfter("· ", ""), W - pad, nb - 1f, align = R, maxW = 96f)
+                small("left " + v.of.substringBefore(" today"), W - pad, nb - 15f, align = R, maxW = 96f)
+                small(if (conf.opt == null || conf.opt == "day") "today" else v.daysLeft, W - pad, nb - 1f, align = R, maxW = 96f)
                 dashed(pad, nb + 12f, W - pad, p.soft)
                 var y = nb + 30f
                 val fit = ((H - pad - 40f - 10f - y) / 19f).toInt() + 1

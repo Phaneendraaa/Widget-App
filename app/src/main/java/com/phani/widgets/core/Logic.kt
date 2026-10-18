@@ -134,17 +134,18 @@ fun spendState(): SpendState {
 }
 
 /** What a spending widget shows, by its option: today's safe amount, this week's, or the whole period's. */
-class SpendView(val value: Double, val label: String, val ringSub: String, val of: String, val used: Float)
+class SpendView(val value: Double, val label: String, val ringSub: String, val of: String, val used: Float, val daysLeft: String, val short: String)
 
 fun spendView(s: SpendState, mode: String?): SpendView {
     val m = if (mode == "week" && D.bPeriod == "week") "period" else mode ?: "day"
     return when (m) {
         "week" -> SpendView(s.weekLeft, "Left this week", "this week",
-            "of ${Fmt.money(s.per * s.weekDays)} · ${plural(s.weekDays, "day")}", (s.today / max(1.0, s.per * s.weekDays)).toFloat())
+            "of ${Fmt.money(s.per * s.weekDays)}", (s.today / max(1.0, s.per * s.weekDays)).toFloat(), plural(s.weekDays, "day") + " left", "This week")
         "period" -> SpendView(s.periodLeft, if (s.periodName.startsWith("until")) "Left ${s.periodName}" else "Left this ${s.periodName}", "left",
-            "of ${Fmt.money(s.total)} · ${plural(s.days, "day")} to go", (s.spent / max(1.0, s.total)).toFloat())
+            "of ${Fmt.money(s.total)}", (s.spent / max(1.0, s.total)).toFloat(), plural(s.days, "day") + " left",
+            if (s.periodName.startsWith("until")) "Trip" else "This ${s.periodName}")
         else -> SpendView(s.left, "Safe to spend", if (s.left < 0) "over today" else "left today",
-            "of ${Fmt.money(s.per)} today", (s.today / max(1.0, s.per)).toFloat())
+            "of ${Fmt.money(s.per)} today", (s.today / max(1.0, s.per)).toFloat(), plural(s.days, "day") + " left", "Safe today")
     }
 }
 

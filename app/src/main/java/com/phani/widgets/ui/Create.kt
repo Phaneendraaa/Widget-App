@@ -308,7 +308,7 @@ private fun infoQuestion(c: WConf) = when (c.type) {
     "countdown" -> if (c.design == "stack") "Your countdowns" else "What are you counting down to?"
     "streak" -> "What habit are you building?"
     "counter" -> "What are you counting?"
-    "spend" -> "What's your monthly budget?"
+    "spend" -> "What's your budget?"
     "subs" -> "Which subscriptions do you pay?"
     "clock" -> "Which cities?"
     "fast" -> "Your fasting goal"
@@ -326,7 +326,7 @@ private fun infoQuestion(c: WConf) = when (c.type) {
 private fun infoSub(c: WConf): String? = when (c.type) {
     "streak" -> "Tap the ✓ on the widget each day you do it."
     "counter" -> "Tap the widget to add one. It starts at zero every day."
-    "spend" -> "Shows what you can spend today so the month lasts."
+    "spend" -> "Shows what you can spend so your budget lasts."
     "subs" -> "Shows the next charge before it hits."
     "clock" -> "Pick up to 3. The Wide size shows two."
     "fast" -> "Start and end your fast with one tap on the widget."
