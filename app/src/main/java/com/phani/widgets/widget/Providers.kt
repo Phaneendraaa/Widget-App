@@ -27,6 +27,7 @@ class LargeWidget : BaseWidget() { override val size = "m" }
 const val ACT_TAP = "com.phani.widgets.TAP"
 const val ACT_PINNED = "com.phani.widgets.PINNED"
 const val ACT_TICK = "com.phani.widgets.TICK"
+const val ACT_MINUTE = "com.phani.widgets.MINUTE"
 
 /** Grid of invisible tap cells laid over the widget image. */
 private val CELLS = intArrayOf(
@@ -81,9 +82,11 @@ abstract class BaseWidget : AppWidgetProvider() {
                 if (id != -1 && pending != null) AppStore.change { bound[id] = pending }
                 Widgets.updateAll(context)
             }
-            ACT_TICK, Intent.ACTION_DATE_CHANGED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> {
+            ACT_TICK, ACT_MINUTE, Intent.ACTION_DATE_CHANGED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 Widgets.prepare(context)
                 Widgets.updateAll(context)
+                Widgets.scheduleTick(context)
             }
         }
     }
@@ -97,7 +100,7 @@ object Widgets {
         WFonts.init(ctx.assets)
         if (AppStore.onChanged == null) {
             val app = ctx.applicationContext
-            AppStore.onChanged = { updateAll(app) }
+            AppStore.onChanged = { updateAll(app); scheduleTick(app) }
         }
     }
 
@@ -256,12 +259,34 @@ object Widgets {
         return try { com.phani.widgets.core.wconf(org.json.JSONObject(s)) } catch (e: Exception) { null }
     }
 
-    /** Light refresh every 15 minutes for timers, clocks and schedules. Inexact, so it costs almost no battery. */
+    /**
+     * Keeps widgets current without draining the battery. All alarms are non-waking: if the phone is asleep
+     * they simply run the next time it's used, which is when the widgets are seen.
+     *  - every 15 minutes, for anything that changes slowly
+     *  - just after midnight, so counters reset and countdowns move on (Android no longer sends apps "date changed")
+     *  - every minute while clocks, timers or schedules are on the home screen
+     * Restarted after the phone reboots or the app updates.
+     */
     fun scheduleTick(ctx: Context) {
-        val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val pi = PendingIntent.getBroadcast(ctx, 9, Intent(ctx, CountdownWidget::class.java).setAction(ACT_TICK),
+        val app = ctx.applicationContext
+        val am = app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        fun pi(code: Int, action: String) = PendingIntent.getBroadcast(app, code, Intent(app, CountdownWidget::class.java).setAction(action),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_FIFTEEN_MINUTES,
-            AlarmManager.INTERVAL_FIFTEEN_MINUTES, pi)
+            AlarmManager.INTERVAL_FIFTEEN_MINUTES, pi(9, ACT_TICK))
+        val zone = java.time.ZoneId.systemDefault()
+        val midnight = java.time.LocalDate.now(zone).plusDays(1).atStartOfDay(zone).plusSeconds(15).toInstant().toEpochMilli()
+        am.set(AlarmManager.RTC, midnight, pi(12, ACT_TICK))
+        val minute = pi(13, ACT_MINUTE)
+        if (needsMinute()) {
+            val now = System.currentTimeMillis()
+            am.set(AlarmManager.RTC, now - now % 60_000 + 60_000 + 1_000, minute)
+        } else am.cancel(minute)
+    }
+
+    /** Widgets on the home screen that show the time or a running timer. */
+    private fun needsMinute(): Boolean {
+        val d = AppStore.data
+        return d.bound.values.any { it.type in setOf("clock", "next", "now") || (it.type == "fast" && d.fast.start != null) }
     }
 }
