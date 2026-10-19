@@ -55,7 +55,7 @@ class ScreensTest {
 
         shot("Welcome")
         step { AppStore.change { onboarded = true } }; shot("Widgets (home)")
-        step { com.phani.widgets.ui.Gallery.cat = "countdown" }; shot("Widgets, Countdown tab")
+        step { com.phani.widgets.ui.Gallery.cat = "sig" }; shot("Widgets, Signature tab")
         step { com.phani.widgets.ui.Gallery.cat = "all"; Create.startFrom("countdown", "big") }; shot("Editor, new")
         step { val c = Create.conf!!; AppStore.change { dates.first { it.id == c.ref }.name = "Lisbon trip" } }; shot("Editor, filled")
         step { Create.conf = Create.conf!!.copy(design = "flip", size = "w") }; shot("Editor, Wide size")

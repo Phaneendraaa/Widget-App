@@ -35,7 +35,12 @@ class RenderSheetTest {
         val items = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, if (t.type == "now") "ink" else "paper", ref = Catalog.defaultRef(t.type)) } } + listOf(
             WConf("t", "spend", "ring", "s", accent = "#9BBF2A", bg = "#1E3A5F", radius = 8, outline = true, title = "Coffee money"),
             WConf("t", "spend", "number", "s", opt = "period"),
-        ) + com.phani.widgets.widget.Themes.all.flatMap { th -> listOf(
+        ) + listOf("midnight", "neon", "retro", "glassdark", "modern").flatMap { th -> listOf(
+            WConf("t", "countdown", "pass", "m", theme = th, ref = Catalog.defaultRef("countdown")),
+            WConf("t", "countdown", "tear", "s", theme = th, ref = Catalog.defaultRef("countdown")),
+            WConf("t", "countdown", "led", "w", theme = th, ref = Catalog.defaultRef("countdown")),
+            WConf("t", "clock", "word", "s", theme = th),
+        ) } + com.phani.widgets.widget.Themes.all.flatMap { th -> listOf(
             WConf("t", "countdown", "big", "s", theme = th.id, ref = Catalog.defaultRef("countdown")),
             WConf("t", "streak", "heat", "m", theme = th.id),
             WConf("t", "clock", "pair", "w", theme = th.id),

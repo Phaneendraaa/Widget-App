@@ -1,6 +1,7 @@
 package com.phani.widgets.core
 
-class DesignDef(val id: String, val name: String, val size: String, val pro: Boolean = false)
+/** [sig] marks a Signature design (drawn as a real object); [look] is the theme it's shown in by default. */
+class DesignDef(val id: String, val name: String, val size: String, val pro: Boolean = false, val sig: Boolean = false, val look: String? = null)
 class TypeDef(val type: String, val name: String, val cat: String, val desc: String, val designs: List<DesignDef>, val isNew: Boolean = false, val pro: Boolean = false)
 
 /** Every widget and its designs, same as the web prototype. Sizes: s = 2×2, w = 4×1, m = 4×2. */
@@ -21,11 +22,14 @@ object Catalog {
         TypeDef("pace", "Pace", "habits", "A goal with a deadline. Shows what you need per day and whether you're ahead or behind.",
             listOf(DesignDef("ring", "Ring", "s"), DesignDef("bar", "Track", "w"), DesignDef("daily", "Daily target", "s")), isNew = true, pro = true),
         TypeDef("countdown", "Countdown", "time", "Days until the date that matters. Repeats yearly for birthdays and holidays.",
-            listOf(DesignDef("big", "Big number", "s"), DesignDef("flip", "Flip", "w"), DesignDef("ring", "Ring", "s", true), DesignDef("stack", "Coming up", "m"))),
+            listOf(DesignDef("big", "Big number", "s"), DesignDef("flip", "Flip", "w"), DesignDef("ring", "Ring", "s", true), DesignDef("stack", "Coming up", "m"),
+                DesignDef("pass", "Boarding pass", "m", sig = true, look = "paper"), DesignDef("tear", "Calendar page", "s", sig = true, look = "paper"),
+                DesignDef("led", "Dot matrix", "w", sig = true, look = "ink"))),
         TypeDef("year", "Progress", "time", "How much of the year, month, week and day is gone.",
             listOf(DesignDef("dots", "Year in dots", "m"), DesignDef("bars", "Four bars", "m"), DesignDef("ring", "Year ring", "s")), pro = true),
         TypeDef("clock", "World clock", "time", "The time where your people are, with the offset from you.",
-            listOf(DesignDef("pair", "Two cities", "w"), DesignDef("analog", "Analog", "m", true), DesignDef("list", "Three cities", "m"))),
+            listOf(DesignDef("pair", "Two cities", "w"), DesignDef("analog", "Analog", "m", true), DesignDef("list", "Three cities", "m"),
+                DesignDef("word", "Word clock", "s", sig = true, look = "midnight"))),
         TypeDef("next", "Next up", "work", "What's next on your schedule, where, and how long until it starts.",
             listOf(DesignDef("card", "Card", "w"), DesignDef("today", "Today", "m"))),
         TypeDef("attendance", "Attendance", "student", "Each class against your required minimum. Tells you how many you can miss, or must attend.",
@@ -33,9 +37,11 @@ object Catalog {
         TypeDef("note", "Note", "smart", "A line you want to see every time you unlock your phone.",
             listOf(DesignDef("sticky", "Sticky", "s"), DesignDef("banner", "Banner", "w"), DesignDef("card", "Card", "m"))),
         TypeDef("today", "Date", "time", "Today's date, week number and the month at a glance.",
-            listOf(DesignDef("day", "Day", "s"), DesignDef("strip", "Strip", "w"), DesignDef("month", "Month", "m"))),
+            listOf(DesignDef("day", "Day", "s"), DesignDef("strip", "Strip", "w"), DesignDef("month", "Month", "m"),
+                DesignDef("tear", "Calendar page", "s", sig = true, look = "paper"))),
         TypeDef("moon", "Moon", "time", "Tonight's moon phase and when the next full moon is.",
-            listOf(DesignDef("moon", "Moon", "s"), DesignDef("phase", "Phase", "w"))),
+            listOf(DesignDef("moon", "Moon", "s"), DesignDef("phase", "Phase", "w"),
+                DesignDef("night", "Night sky", "s", sig = true))),
     )
     val cats = listOf("all" to "All", "smart" to "Smart", "money" to "Money", "health" to "Health", "habits" to "Habits & goals", "time" to "Time", "work" to "Schedule", "student" to "Student")
     val styles = listOf(Triple("you", "Wallpaper", false), Triple("paper", "Paper", false), Triple("ink", "Ink", false), Triple("tint", "Tint", true), Triple("frost", "Frost", true), Triple("smoke", "Smoke", true), Triple("clear", "Clear", true))

@@ -44,6 +44,7 @@ private val C = Paint.Align.CENTER
 object Designs {
 
     fun draw(x: Ctx) {
+        if (Signature.draw(x)) return
         when (x.conf.type) {
             "now" -> now(x)
             "spend" -> spend(x)

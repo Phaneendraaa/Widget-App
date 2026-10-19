@@ -156,7 +156,7 @@ fun widgetName(c: WConf): String {
         "countdown" -> if (c.design == "stack") "Coming up" else d.dates.firstOrNull { it.id == c.ref }?.name?.ifBlank { null } ?: "Countdown"
         "streak" -> d.habits.firstOrNull { it.id == c.ref }?.name?.ifBlank { null } ?: "Streak"
         "counter" -> d.counters.firstOrNull { it.id == c.ref }?.name?.ifBlank { null } ?: "Counter"
-        "clock" -> d.clocks.take(if (c.design == "pair") 2 else 3).joinToString(" · ") { it.city }.ifBlank { "World clock" }
+        "clock" -> if (c.design == "word") "Word clock" else d.clocks.take(if (c.design == "pair") 2 else 3).joinToString(" · ") { it.city }.ifBlank { "World clock" }
         "pace" -> d.goals.firstOrNull { it.id == c.ref }?.name?.ifBlank { null } ?: "Pace"
         "note" -> d.notes.firstOrNull { it.id == c.ref }?.text?.lineSequence()?.firstOrNull()?.take(30)?.ifBlank { null } ?: "Note"
         else -> Catalog.type(c.type).name
@@ -317,7 +317,7 @@ private fun infoOk(c: WConf): Boolean {
         "counter" -> d.counters.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
         "spend" -> d.budget > 0
         "subs" -> d.subs.isNotEmpty()
-        "clock" -> d.clocks.isNotEmpty()
+        "clock" -> c.design == "word" || d.clocks.isNotEmpty()
         "pace" -> d.goals.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
         "note" -> d.notes.firstOrNull { it.id == c.ref }?.text?.isNotBlank() == true
         "next" -> d.sched.values.any { it.isNotEmpty() }
@@ -332,7 +332,7 @@ private fun infoQuestion(c: WConf) = when (c.type) {
     "counter" -> "What are you counting?"
     "spend" -> "What's your budget?"
     "subs" -> "Which subscriptions do you pay?"
-    "clock" -> "Which cities?"
+    "clock" -> if (c.design == "word") "Nothing to fill in" else "Which cities?"
     "fast" -> "Your fasting goal"
     "pace" -> "What's your goal?"
     "year" -> "Nothing to fill in"
@@ -350,7 +350,7 @@ private fun infoSub(c: WConf): String? = when (c.type) {
     "counter" -> "Tap the widget to add one. It starts at zero every day."
     "spend" -> "Shows what you can spend so your budget lasts."
     "subs" -> "Shows the next charge before it hits."
-    "clock" -> "Pick up to 3. The Wide size shows two."
+    "clock" -> if (c.design == "word") "It spells out your phone's time in words, lit up every 5 minutes." else "Pick up to 3. The Wide size shows two."
     "fast" -> "Start and end your fast with one tap on the widget."
     "pace" -> "Shows what you need each day to hit it, and whether you're ahead."
     "year" -> "It works out how much of the year, month, week and day is gone."
@@ -373,7 +373,7 @@ private fun InfoFields(c: WConf) {
             "counter" -> { CounterInfo(c); RemindToggle("water", "Nudge me if I'm behind", "Every 2 hours, 10 am to 8 pm") }
             "spend" -> SpendInfo(c)
             "subs" -> { SubsInfo(); RemindToggle("subs", "Remind me the day before", "So you can cancel in time") }
-            "clock" -> ClockInfo()
+            "clock" -> if (c.design != "word") ClockInfo()
             "fast" -> FastInfo()
             "pace" -> PaceInfo(c)
             "note" -> NoteInfo(c)

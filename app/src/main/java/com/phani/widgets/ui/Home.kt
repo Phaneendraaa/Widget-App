@@ -105,7 +105,7 @@ fun GalleryScreen() {
     SearchBar()
     if (Gallery.query.isBlank() && Gallery.size == null && Gallery.cat == "all") Packs()
     // category tabs: the row slides along by itself so the next tabs come into view
-    val cats = listOf("all" to "All") + Catalog.visible.map { it.type to it.name }
+    val cats = listOf("all" to "All", "sig" to "✦ Signature") + Catalog.visible.map { it.type to it.name }
     val tabState = androidx.compose.foundation.lazy.rememberLazyListState()
     androidx.compose.runtime.LaunchedEffect(Gallery.cat) {
         val i = cats.indexOfFirst { it.first == Gallery.cat }.coerceAtLeast(0)
@@ -121,8 +121,9 @@ fun GalleryScreen() {
         }
     }
     val q = Gallery.query.trim()
-    val items = Catalog.visible.filter { q.isNotEmpty() || Gallery.cat == "all" || it.type == Gallery.cat }
-        .flatMap { t -> t.designs.filter { size == null || it.size == size }.map { t to it } }
+    val items = Catalog.visible.filter { q.isNotEmpty() || Gallery.cat == "all" || Gallery.cat == "sig" || it.type == Gallery.cat }
+        .flatMap { t -> t.designs.filter { (size == null || it.size == size) && (Gallery.cat != "sig" || q.isNotEmpty() || it.sig) }.map { t to it } }
+        .sortedByDescending { it.second.sig } // Signature designs lead
         .filter { (t, d) -> q.isEmpty() || listOf(t.name, d.name, t.desc, typeBlurb(t.type), Catalog.sizeName[d.size] ?: "").any { it.contains(q, ignoreCase = true) } }
     if (q.isNotEmpty()) Text(if (items.isEmpty()) "No widgets match \u201c$q\u201d" else "${items.size} result" + (if (items.size == 1) "" else "s"),
         style = T.small, color = p.muted, modifier = Modifier.padding(bottom = 10.dp))
@@ -159,15 +160,20 @@ private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier) {
     val p = pal()
     val (wbg, _) = wall()
     val show = listOf("paper", "midnight", "modern", "retro", "paper", "neon", "pastel", "ink", "ocean", "newspaper", "terminal", "sunset")
-    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, theme = show[Math.floorMod((t.type + d.id).hashCode(), show.size)])
+    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, theme = d.look ?: show[Math.floorMod((t.type + d.id).hashCode(), show.size)])
     val open = { Create.startFrom(t.type, d.id, Gallery.bindId, conf.theme); Gallery.bindId = -1; Gallery.size = null }
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(p.card).clickable { open() }) {
         Box(Modifier.fillMaxWidth().background(wbg).padding(10.dp), contentAlignment = Alignment.Center) {
             Zoomed(conf, 0.78f) { open() }
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
-            Text(if (d.size == "s") t.name else "${t.name} · ${d.name}", style = T.smallB.copy(fontSize = 14.sp), color = p.ink, maxLines = 1)
-            Text(if (d.size == "s") "${d.name} · ${Catalog.sizeGrid[d.size]}" else "${Catalog.sizeGrid[d.size]} · ${typeBlurb(t.type)}", style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
+            if (d.sig) {
+                Text("✦ " + d.name, style = T.smallB.copy(fontSize = 14.sp), color = p.ink, maxLines = 1)
+                Text("${t.name} · ${Catalog.sizeGrid[d.size]}", style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
+            } else {
+                Text(if (d.size == "s") t.name else "${t.name} · ${d.name}", style = T.smallB.copy(fontSize = 14.sp), color = p.ink, maxLines = 1)
+                Text(if (d.size == "s") "${d.name} · ${Catalog.sizeGrid[d.size]}" else "${Catalog.sizeGrid[d.size]} · ${typeBlurb(t.type)}", style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
+            }
         }
     }
 }
