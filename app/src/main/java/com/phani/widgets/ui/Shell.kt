@@ -57,6 +57,7 @@ fun AppShell() {
         }
         if (Create.open) CreateScreen()
         SheetHost()
+        if (StyleSheet.open) StylePicker()
         if (!AppStore.data.onboarded) Onboarding()
     }
 }

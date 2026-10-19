@@ -86,7 +86,7 @@ fun Onboarding() {
         Headline("Widgets that ", "answer.")
         Sub("Days until your trip. Whether your streak is safe. What you can spend today. Right on your home screen.")
         Spacer(Modifier.height(32.dp))
-        BigButton("Get started") { AppStore.change { onboarded = true } }
+        BigButton("Get started") { StyleSheet.first = true; StyleSheet.open = true; AppStore.change { onboarded = true } }
     }
 }
 

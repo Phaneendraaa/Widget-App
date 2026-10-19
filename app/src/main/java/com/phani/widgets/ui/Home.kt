@@ -158,6 +158,7 @@ fun GalleryScreen() {
 
 @Composable
 private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier) {
+    AppStore.rev
     val p = pal()
     // every design is shown in the user's own style, so what they see is what they get
     val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, theme = com.phani.widgets.widget.Themes.APP)

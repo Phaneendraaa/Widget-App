@@ -88,7 +88,6 @@ fun Sheet(title: String, onDismiss: () -> Unit, content: @Composable ColumnScope
 fun SheetHost() {
     TrackSheetHost()
     if (Sheets.help) HelpSheet { Sheets.help = false }
-    StyleSheetHost()
 }
 
 @Composable

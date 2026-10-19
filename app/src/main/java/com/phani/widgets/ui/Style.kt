@@ -29,6 +29,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 import com.phani.widgets.core.AppStore
 import com.phani.widgets.core.WConf
 import com.phani.widgets.widget.Themes
@@ -39,6 +58,8 @@ import com.phani.widgets.widget.hexColor
 /** The app-wide style: chosen once, used by every widget that follows it. */
 object StyleSheet {
     var open by mutableStateOf(false)
+    /** True on first launch: the picker is the first thing people choose. */
+    var first by mutableStateOf(false)
 
     fun current(): WTheme = Themes.get(AppStore.look) ?: Themes.all[0]
 
@@ -93,50 +114,120 @@ fun StyleCard() {
     }
 }
 
+/* ---------------- Choose your style ---------------- */
+
+/** A home screen made of our widgets, to show what a style looks like on a real phone. */
+private val HOME = listOf(
+    listOf(WConf("pv1", "spend", "metal", "m")),
+    listOf(WConf("pv2", "streak", "flame", "s"), WConf("pv3", "counter", "liquid", "s")),
+    listOf(WConf("pv4", "countdown", "led", "w")),
+    listOf(WConf("pv5", "clock", "word", "s"), WConf("pv6", "today", "tear", "s")),
+)
+
+/** A wallpaper that suits each style, so it's shown the way people would really use it. Second value: light text on it. */
+private fun phoneWall(id: String): Pair<List<Color>, Boolean> = when (id) {
+    "midnight" -> listOf(Color(0xFF1B2440), Color(0xFF3B4C7A)) to true
+    "glass" -> listOf(Color(0xFF2B5876), Color(0xFFD38A5C), Color(0xFFF2C38B)) to true
+    "glassdark" -> listOf(Color(0xFF4B3B6B), Color(0xFFC06C84), Color(0xFFF8B195)) to true
+    "modern" -> listOf(Color(0xFFEDE8F7), Color(0xFFD6CCF2)) to false
+    "ocean" -> listOf(Color(0xFFD5ECF2), Color(0xFF93C9D8)) to false
+    "sunset" -> listOf(Color(0xFFFFE6CF), Color(0xFFF3B39E)) to false
+    "retro" -> listOf(Color(0xFFCDBB9F), Color(0xFFA08766)) to false
+    "newspaper" -> listOf(Color(0xFFE6E1D6), Color(0xFFCBC4B6)) to false
+    "neon" -> listOf(Color(0xFF07070F), Color(0xFF1C1236)) to true
+    "terminal" -> listOf(Color(0xFF040704), Color(0xFF0E1A10)) to true
+    "pastel" -> listOf(Color(0xFFFBE2EC), Color(0xFFDFE3FB)) to false
+    "ink" -> listOf(Color(0xFFE9E5DD), Color(0xFFCFC9BE)) to false
+    "paper" -> listOf(Color(0xFF8EA3B5), Color(0xFF5E7487)) to true
+    else -> { val (bg, fg) = wall(); listOf(bg, bg) to (fg.red + fg.green + fg.blue > 1.5f) }
+}
+
 @Composable
-fun StyleSheetHost() {
-    if (!StyleSheet.open) return
-    AppStore.rev
-    val p = pal()
-    Sheet("Your style", { StyleSheet.open = false }) {
-        Text("Every widget uses this style, in the app and on your home screen. Change it any time.", style = T.small, color = p.muted,
-            modifier = Modifier.padding(bottom = 14.dp))
-        val cur = AppStore.look
-        Themes.all.chunked(2).forEach { row ->
-            Row(Modifier.padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { t -> StyleOption(t, cur == t.id, Modifier.weight(1f)) { StyleSheet.pick(t.id) } }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
-        val own = StyleSheet.ownLook()
-        if (own > 0) {
-            Column(Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp)) {
-                Text(if (own == 1) "1 of your widgets has its own look" else "$own of your widgets have their own look", style = T.smallB, color = p.ink)
-                Text("They keep it when you change your style.", style = T.small, color = p.muted, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
-                Box(Modifier.clip(RoundedCornerShape(20.dp)).background(p.ink).clickable { StyleSheet.allFollow() }.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                    Text("Use my style on all of them", style = T.smallB, color = p.paper)
+private fun PhonePreview(t: WTheme, w: Dp) {
+    val vw = 360f; val vh = 760f
+    val k = w.value / vw
+    val (cols, light) = phoneWall(t.id)
+    val on = if (light) Color.White else Color(0xFF1C1C1A)
+    val outer = LocalDensity.current
+    Box(Modifier.size(w, (vh * k).dp).clip(RoundedCornerShape((46 * k).dp)).background(Color(0xFF0B0B0C)).padding((5 * k).dp)) {
+        // lay the phone out at real size, drawn at a smaller density so every widget stays sharp
+        CompositionLocalProvider(LocalDensity provides Density(outer.density * k, outer.fontScale)) {
+            Column(Modifier.size((vw - 10f).dp, (vh - 10f).dp).clip(RoundedCornerShape(41.dp)).background(Brush.linearGradient(cols))) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 28.dp).padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("9:41", style = T.smallB.copy(fontSize = 14.sp), color = on, modifier = Modifier.weight(1f))
+                    repeat(3) { Box(Modifier.padding(start = 5.dp).size(if (it == 2) 22.dp else 12.dp, 10.dp).clip(RoundedCornerShape(3.dp)).background(on.copy(alpha = 0.8f))) }
+                }
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HOME.forEach { row ->
+                        if (row.size == 1) WidgetView(row[0].copy(theme = t.id), Modifier.fillMaxWidth(), live = false, sample = true)
+                        else Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            row.forEach { c -> Box(Modifier.weight(1f)) { WidgetView(c.copy(theme = t.id), Modifier.fillMaxWidth(), live = false, sample = true) } }
+                        }
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth().padding(horizontal = 34.dp).padding(bottom = 26.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    repeat(4) { Box(Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(on.copy(alpha = 0.22f))) }
                 }
             }
         }
     }
 }
 
-/** One style to pick: a real widget drawn in it, over a backdrop that shows glass and see-through looks. */
+/** Swipe through full home screens, one per style, and pick one. Shown on first launch and from "Your style". */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun StyleOption(t: WTheme, on: Boolean, modifier: Modifier, onPick: () -> Unit) {
+fun StylePicker() {
+    AppStore.rev
     val p = pal()
-    Column(modifier.clip(RoundedCornerShape(20.dp)).background(p.card)
-        .then(if (on) Modifier.border(2.dp, p.ink, RoundedCornerShape(20.dp)) else Modifier)
-        .clickable(onClick = onPick).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(themeBackdrop(t.id)), contentAlignment = Alignment.Center) {
-            Thumb(WConf("st" + t.id, "countdown", "big", "s", theme = t.id), 150f, 108f, sample = true, onTap = onPick)
-            if (on) Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(CircleShape).background(p.ink), contentAlignment = Alignment.Center) {
-                Icon(Ic.check, null, tint = p.paper, modifier = Modifier.size(14.dp))
+    val list = Themes.all
+    val close = { StyleSheet.open = false; StyleSheet.first = false }
+    BackHandler { close() }
+    val start = list.indexOfFirst { it.id == AppStore.look }.coerceAtLeast(0)
+    val pager = rememberPagerState(initialPage = start) { list.size }
+    val scope = rememberCoroutineScope()
+    Column(Modifier.fillMaxSize().background(p.paper).pointerInput(Unit) { detectTapGestures { } }.windowInsetsPadding(WindowInsets.systemBars)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!StyleSheet.first) Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).clickable { close() }, contentAlignment = Alignment.Center) {
+                Icon(Ic.back, "Back", tint = p.ink, modifier = Modifier.size(22.dp))
+            } else Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                Text("Choose your style", style = T.h3, color = p.ink)
+                Text("Every widget will match. Swipe to see them all.", style = T.small, color = p.muted)
             }
         }
-        Column(Modifier.padding(horizontal = 4.dp)) {
-            Text(t.name, style = T.smallB, color = p.ink, maxLines = 1)
-            Text(t.blurb, style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(vertical = 14.dp)) {
+            val pw = minOf(maxWidth * 0.66f, maxHeight * (360f / 760f))
+            HorizontalPager(state = pager, contentPadding = PaddingValues(horizontal = (maxWidth - pw) / 2), pageSpacing = 14.dp,
+                modifier = Modifier.fillMaxSize()) { i ->
+                val off = ((pager.currentPage - i) + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f)
+                Box(Modifier.fillMaxSize().graphicsLayer(scaleX = 1f - 0.08f * off, scaleY = 1f - 0.08f * off, alpha = 1f - 0.35f * off)
+                    .clickable { scope.launch { pager.animateScrollToPage(i) } }, contentAlignment = Alignment.Center) {
+                    PhonePreview(list[i], pw)
+                }
+            }
+        }
+        val t = list[pager.currentPage]
+        val using = t.id == AppStore.look
+        Column(Modifier.fillMaxWidth().padding(horizontal = Pad).padding(bottom = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Swatch(t, 26.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(t.name, style = T.bodyB.copy(fontSize = 18.sp), color = p.ink, modifier = Modifier.weight(1f))
+                Text("${pager.currentPage + 1} of ${list.size}", style = T.small, color = p.muted)
+            }
+            Text(t.blurb, style = T.small, color = p.muted, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+            BigButton(if (using) "Keep ${t.name}" else "Use ${t.name}") {
+                if (!using) { StyleSheet.pick(t.id); Toaster.show("Your widgets now use ${t.name}") }
+                close()
+            }
+            val own = StyleSheet.ownLook()
+            if (own > 0) Text(
+                (if (own == 1) "1 widget has" else "$own widgets have") + " its own look. Use ${t.name} on all of them",
+                style = T.small, color = p.muted,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { StyleSheet.pick(t.id); StyleSheet.allFollow(); Toaster.show("All your widgets now use ${t.name}"); close() }
+                    .padding(vertical = 10.dp, horizontal = 4.dp),
+            )
         }
     }
 }
