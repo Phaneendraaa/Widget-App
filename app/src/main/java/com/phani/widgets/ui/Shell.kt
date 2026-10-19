@@ -53,7 +53,7 @@ fun AppShell() {
             ToastHost(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 if (AppStore.undo()) Toaster.show("Undone")
             }
-            if (Nav.screen != "settings") BottomTabs()
+            BottomTabs()
         }
         if (Create.open) CreateScreen()
         SheetHost()

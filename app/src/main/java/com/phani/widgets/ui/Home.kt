@@ -29,6 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -57,6 +62,52 @@ object Gallery {
     var size by mutableStateOf<String?>(null)
     var bindId by mutableIntStateOf(-1)
     var query by mutableStateOf("")
+    /** Zoom while a pinch is under way; -1 when not pinching. */
+    var pinch by mutableStateOf(-1f)
+    val LEVELS = listOf(0.7f, 0.85f, 1f, 1.2f, 1.45f)
+    const val MIN = 0.6f
+    const val MAX = 1.6f
+    fun zoom(): Float = if (pinch > 0f) pinch else AppStore.data.zoom
+    fun setZoom(z: Float) = AppStore.change { zoom = z.coerceIn(MIN, MAX) }
+    fun zoomIn() { val z = zoom(); setZoom(LEVELS.firstOrNull { it > z + 0.01f } ?: MAX) }
+    fun zoomOut() { val z = zoom(); setZoom(LEVELS.lastOrNull { it < z - 0.01f } ?: MIN) }
+}
+
+/** Pinch with two fingers to zoom the previews; one finger still scrolls and swipes as usual. */
+private fun Modifier.pinchZoom(): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+        var z = Gallery.zoom()
+        var pinching = false
+        do {
+            val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            if (e.changes.count { it.pressed } >= 2) {
+                pinching = true
+                z = (z * e.calculateZoom()).coerceIn(Gallery.MIN, Gallery.MAX)
+                Gallery.pinch = z
+                e.changes.forEach { it.consume() }
+            }
+        } while (e.changes.any { it.pressed })
+        if (pinching) { Gallery.pinch = -1f; Gallery.setZoom(z) }
+    }
+}
+
+/** − 100% + : make the previews smaller to see more at once, or bigger to see detail. Tap the number to reset. */
+@Composable
+private fun ZoomControl() {
+    AppStore.rev
+    val p = pal()
+    val z = Gallery.zoom()
+    Row(Modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.card).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).clickable(enabled = z > Gallery.MIN + 0.01f) { Gallery.zoomOut() }, contentAlignment = Alignment.Center) {
+            Icon(Ic.minus, "Zoom out", tint = if (z > Gallery.MIN + 0.01f) p.ink else p.muted.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+        }
+        Text("${(z * 100).roundToInt()}%", style = T.smallB, color = p.ink, textAlign = TextAlign.Center,
+            modifier = Modifier.width(46.dp).clip(RoundedCornerShape(10.dp)).clickable { Gallery.setZoom(1f) }.padding(vertical = 6.dp))
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).clickable(enabled = z < Gallery.MAX - 0.01f) { Gallery.zoomIn() }, contentAlignment = Alignment.Center) {
+            Icon(Ic.plus, "Zoom in", tint = if (z < Gallery.MAX - 0.01f) p.ink else p.muted.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+        }
+    }
 }
 
 @Composable
@@ -78,13 +129,11 @@ private fun SearchBar() {
 }
 
 @Composable
-private fun TopTitle(title: String) {
+private fun TopTitle(title: String, end: (@Composable () -> Unit)? = null) {
     val p = pal()
-    Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 14.dp).height(44.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = T.h1, color = p.ink, modifier = Modifier.weight(1f))
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).background(p.card).clickable { Nav.screen = "settings" }, contentAlignment = Alignment.Center) {
-            Icon(Ic.gear, "Settings", tint = p.ink, modifier = Modifier.size(22.dp))
-        }
+        end?.invoke()
     }
 }
 
@@ -106,7 +155,7 @@ private val NEEDS = listOf(
 fun GalleryScreen() {
     AppStore.rev
     val p = pal()
-    TopTitle("Widgets")
+    TopTitle("Widgets") { ZoomControl() }
     StyleCard()
     val size = Gallery.size
     if (size != null) {
@@ -119,6 +168,8 @@ fun GalleryScreen() {
     SearchBar()
     val q = Gallery.query.trim()
     if (q.isNotEmpty()) { SearchResults(q, size); return }
+    val z = Gallery.zoom()
+    Column(Modifier.pinchZoom()) {
     NEEDS.forEach { n ->
         val items = n.types.flatMap { ty -> val t = Catalog.type(ty); t.designs.filter { size == null || it.size == size }.map { t to it } }
             .sortedByDescending { it.second.sig } // Signature designs lead
@@ -139,9 +190,10 @@ fun GalleryScreen() {
         ) {
             items(items.size) { i ->
                 val (t, d) = items[i]
-                DesignCard(t, d, Modifier.width(if (d.size == "s") 148.dp else 252.dp), boxH = 150.dp, zoom = 0.7f)
+                DesignCard(t, d, Modifier.width(if (d.size == "s") (148 * z).dp else (252 * z).dp), boxH = (150 * z).dp, zoom = 0.7f * z)
             }
         }
+    }
     }
 }
 
@@ -167,19 +219,28 @@ private fun SearchResults(q: String, size: String?) {
         .sortedByDescending { it.second.sig }
     Text(if (items.isEmpty()) "No widgets match \u201c$q\u201d" else "${items.size} result" + (if (items.size == 1) "" else "s"),
         style = T.small, color = p.muted, modifier = Modifier.padding(bottom = 10.dp))
-    // small designs pair up, wide and large take the whole row
-    val rows = mutableListOf<List<Pair<TypeDef, DesignDef>>>()
-    var half: Pair<TypeDef, DesignDef>? = null
-    items.forEach { it2 ->
-        if (it2.second.size == "s") { if (half == null) half = it2 else { rows.add(listOf(half!!, it2)); half = null } }
-        else rows.add(listOf(it2))
+    // zoomed out: more per row; zoomed in: fewer, bigger
+    val z = Gallery.zoom()
+    val smallCols = if (z < 0.8f) 3 else if (z > 1.3f) 1 else 2
+    val wideCols = if (z < 0.8f) 2 else 1
+    val rows = mutableListOf<MutableList<Pair<TypeDef, DesignDef>>>()
+    var curS: MutableList<Pair<TypeDef, DesignDef>>? = null
+    var curW: MutableList<Pair<TypeDef, DesignDef>>? = null
+    for (it2 in items) {
+        if (it2.second.size == "s") {
+            if (curS == null || curS.size >= smallCols) { curS = mutableListOf(); rows.add(curS) }
+            curS.add(it2)
+        } else {
+            if (curW == null || curW.size >= wideCols) { curW = mutableListOf(); rows.add(curW) }
+            curW.add(it2)
+        }
     }
-    half?.let { rows.add(listOf(it)) }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.pinchZoom(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         rows.forEach { row ->
+            val cols = if (row[0].second.size == "s") smallCols else wideCols
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f)) }
-                if (row.size == 1 && row[0].second.size == "s") Spacer(Modifier.weight(1f))
+                row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f), zoom = 0.78f * z) }
+                repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -282,14 +343,13 @@ private fun WidgetCard(c: WConf) {
 @Composable
 fun BottomTabs() {
     val p = pal()
-    Row(Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(30.dp)).background(p.nav).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf(Triple("home", "Widgets", Ic.grid), Triple("mine", "My widgets", Ic.home)).forEach { (k, l, ic) ->
+    Row(Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(32.dp)).background(p.nav).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        listOf(Triple("home", "Widgets", Ic.grid), Triple("mine", "My widgets", Ic.home), Triple("settings", "Settings", Ic.gear)).forEach { (k, l, ic) ->
             val on = Nav.screen == k
-            Row(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(24.dp)).background(if (on) p.ink else Color.Transparent).clickable { Nav.screen = k },
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Icon(ic, null, tint = if (on) p.paper else p.muted, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted)
+            Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(26.dp)).background(if (on) p.ink else Color.Transparent).clickable { Nav.screen = k },
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Icon(ic, l, tint = if (on) p.paper else p.muted, modifier = Modifier.size(20.dp))
+                Text(l, style = T.smallB.copy(fontSize = 12.sp), color = if (on) p.paper else p.muted, maxLines = 1)
             }
         }
     }

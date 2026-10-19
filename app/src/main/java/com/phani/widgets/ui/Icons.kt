@@ -30,6 +30,7 @@ object Ic {
     val track = make("track", 1.8f, false, "M5 19V9", "M12 19V5", "M19 19v-7")
     val gear = make("gear", 1.8f, false, "M12 9a3 3 0 1 1 0 6a3 3 0 1 1 0-6z", "M12 3v2.5", "M12 18.5V21", "M3 12h2.5", "M18.5 12H21", "M5.6 5.6l1.8 1.8", "M16.6 16.6l1.8 1.8", "M5.6 18.4l1.8-1.8", "M16.6 7.4l1.8-1.8")
     val plus = make("plus", 2f, false, "M12 5v14", "M5 12h14")
+    val minus = make("minus", 2f, false, "M5 12h14")
     val check = make("check", 2.4f, false, "M5 12.5l4.5 4.5L19 7.5")
     val x = make("x", 2.2f, false, "M6 6l12 12", "M18 6L6 18")
     val up = make("up", 2.2f, false, "M6 14l6-6 6 6")

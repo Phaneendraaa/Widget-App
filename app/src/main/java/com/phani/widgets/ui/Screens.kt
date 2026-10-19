@@ -54,11 +54,7 @@ fun SettingsScreen() {
     AppStore.rev
     val p = pal()
     val d = AppStore.data
-    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).clickable { Nav.screen = "home" }, contentAlignment = Alignment.Center) {
-            Icon(Ic.back, "Back", tint = p.ink, modifier = Modifier.size(22.dp))
-        }
-    }
+    Spacer(Modifier.height(12.dp))
     TopBar("Settings", "Works offline. Nothing leaves your phone.")
 
     SectionTitle("App appearance")
