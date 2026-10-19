@@ -61,11 +61,11 @@ object Signature {
     fun draw(x: Ctx): Boolean {
         when ("${x.conf.type}/${x.conf.design}") {
             "countdown/pass" -> pass(x)
-            "countdown/tear" -> tear(x, countdown = true)
+            "countdown/tear", "countdown/teartall" -> tear(x, countdown = true)
             "countdown/led" -> led(x)
-            "today/tear" -> tear(x, countdown = false)
+            "today/tear", "today/teartall" -> tear(x, countdown = false)
             "clock/word" -> wordClock(x)
-            "moon/night" -> nightMoon(x)
+            "moon/night", "moon/nighttall" -> nightMoon(x)
             "countdown/photo", "countdown/photowide" -> photoCountdown(x)
             "today/photo" -> photoDate(x)
             "note/polaroid" -> polaroid(x)

@@ -228,6 +228,26 @@ object LiveDesigns {
                     }
                 }
             }
+            "skytall" -> {
+                sky(w)
+                text(city.uppercase(), pad, pad + 11.5f, 10.5f, labelFace(), a(0.85f, WHITE), 0.12f, maxW = W - 2 * pad)
+                val tx = deg(w.temp)
+                val sz = fit(tx, 50f, W - 2 * pad)
+                num(tx, pad - 2f, pad + 22f + cap(sz), sz, WHITE)
+                text(Live.cond(w.code), pad, pad + 22f + cap(sz) + 18f, 13f, uiFace(600), WHITE, maxW = W - 2 * pad)
+                text(hl, pad, pad + 22f + cap(sz) + 33f, 11.5f, uiFace(500), a(0.82f, WHITE), maxW = W - 2 * pad)
+                // the next hours, one per row
+                val top = pad + 22f + cap(sz) + 46f
+                val rows = ((H - pad - top) / 24f).toInt().coerceIn(1, 6)
+                val rh = (H - pad - top) / rows
+                Live.nextHours(w, rows + 1).drop(1).take(rows).forEachIndexed { i, h ->
+                    val y = top + rh * i
+                    line(pad, y, W - pad, y, stroke(a(0.18f, WHITE), 1f))
+                    text(hourLabel(h.t), pad, y + rh / 2 + 4.5f, 12f, uiFace(500), a(0.85f, WHITE))
+                    icon(h.code, isDayHour(h.t, w), W / 2 + 4f, y + rh / 2, 18f, true)
+                    text(deg(h.temp), W - pad, y + rh / 2 + 4.5f, 13f, uiFace(600), WHITE, align = R)
+                }
+            }
             "hours" -> {
                 val lw = 100f
                 label(city, pad + 2f, pad + 10f, lw)
@@ -367,6 +387,22 @@ object LiveDesigns {
                     val v = Live.fmt(k, q.v, cur)
                     text(v, x0, H / 2 + 8f, fitText(v, 17f, cw - 12f), uiFace(600), p.fg, -0.01f)
                     q.ch?.let { ch -> text(Live.pct(ch), x0, H - pad - 3f, 10.5f, uiFace(600), if (ch >= 0) UP else DOWN, maxW = cw - 12f) }
+                }
+            }
+            "column" -> {
+                label(ttl("Rates"), pad, pad + 11.5f, W - 2 * pad)
+                val rows = keys.take(4)
+                val top = pad + 22f
+                val rh = (H - pad - top) / max(1, rows.size)
+                rows.forEachIndexed { i, k ->
+                    val q = D.quotes[k]
+                    val y = top + rh * i
+                    if (i > 0) line(pad, y, W - pad, y, stroke(p.soft, 1f))
+                    text(Live.quoteName(k).uppercase(), pad, y + 15f, 10f, labelFace(), p.mut, 0.1f, maxW = W - 2 * pad)
+                    if (q == null) { small("…", pad, y + 36f); return@forEachIndexed }
+                    val v = Live.fmt(k, q.v, cur)
+                    text(v, pad, y + 35f, fitText(v, 18f, W - 2 * pad), uiFace(600), p.fg, -0.01f)
+                    q.ch?.let { ch -> if (rh >= 54f) text(Live.pct(ch), pad, y + 50f, 10.5f, uiFace(600), if (ch >= 0) UP else DOWN) }
                 }
             }
             "one" -> {

@@ -17,20 +17,20 @@ object Catalog {
                 DesignDef("tiles", "Monogram tiles", "m", sig = true, look = "midnight")), isNew = true),
         TypeDef("fast", "Fasting", "health", "A fasting timer that runs on your home screen. Start and end with one tap.",
             listOf(DesignDef("ring", "Ring", "s"), DesignDef("timer", "Timer", "w"), DesignDef("big", "Big hours", "s", true),
-                DesignDef("arc", "Sun arc", "m", sig = true, look = "midnight"))),
+                DesignDef("arc", "Sun arc", "m", sig = true, look = "midnight"), DesignDef("tube", "Rising", "t"))),
         TypeDef("counter", "Counter", "health", "Water, coffee, reps, anything. Tap +1 right on the widget.",
             listOf(DesignDef("glass", "Glass", "s"), DesignDef("dots", "Dots", "w"), DesignDef("big", "Big number", "s"),
-                DesignDef("liquid", "Water glass", "s", sig = true, look = "paper"))),
+                DesignDef("liquid", "Water glass", "s", sig = true, look = "paper"), DesignDef("bottle", "Tall glass", "t", sig = true))),
         TypeDef("streak", "Streak", "habits", "Check in with a tap. Miss a day and a freeze keeps the streak alive.",
             listOf(DesignDef("week", "Week", "w"), DesignDef("heat", "Heatmap", "m"), DesignDef("big", "Big number", "s"), DesignDef("ring", "Week ring", "s", true),
-                DesignDef("flame", "Flame", "s", sig = true, look = "ink"))),
+                DesignDef("flame", "Flame", "s", sig = true, look = "ink"), DesignDef("month", "Month", "t"))),
         TypeDef("pace", "Pace", "habits", "A goal with a deadline. Shows what you need per day and whether you're ahead or behind.",
             listOf(DesignDef("ring", "Ring", "s"), DesignDef("bar", "Track", "w"), DesignDef("daily", "Daily target", "s"),
                 DesignDef("climb", "Summit", "m", sig = true, look = "paper")), isNew = true, pro = true),
         TypeDef("countdown", "Countdown", "time", "Days until the date that matters. Repeats yearly for birthdays and holidays.",
             listOf(DesignDef("big", "Big number", "s"), DesignDef("flip", "Flip", "w"), DesignDef("ring", "Ring", "s", true), DesignDef("stack", "Coming up", "m"),
                 DesignDef("pass", "Boarding pass", "m", sig = true, look = "paper"), DesignDef("tear", "Calendar page", "s", sig = true, look = "paper"),
-                DesignDef("led", "Dot matrix", "w", sig = true, look = "ink"),
+                DesignDef("led", "Dot matrix", "w", sig = true, look = "ink"), DesignDef("teartall", "Tall calendar", "t", sig = true),
                 DesignDef("photo", "Photo", "s", sig = true), DesignDef("photowide", "Photo", "m", sig = true))),
         TypeDef("year", "Progress", "time", "How much of the year, month, week and day is gone.",
             listOf(DesignDef("dots", "Year in dots", "m"), DesignDef("bars", "Four bars", "m"), DesignDef("ring", "Year ring", "s")), pro = true),
@@ -46,17 +46,17 @@ object Catalog {
                 DesignDef("polaroid", "Polaroid", "s", sig = true))),
         TypeDef("today", "Date", "time", "Today's date, week number and the month at a glance.",
             listOf(DesignDef("day", "Day", "s"), DesignDef("strip", "Strip", "w"), DesignDef("month", "Month", "m"),
-                DesignDef("tear", "Calendar page", "s", sig = true, look = "paper"), DesignDef("photo", "Photo", "s", sig = true))),
+                DesignDef("tear", "Calendar page", "s", sig = true, look = "paper"), DesignDef("photo", "Photo", "s", sig = true), DesignDef("teartall", "Tall calendar", "t", sig = true))),
         TypeDef("moon", "Moon", "time", "Tonight's moon phase and when the next full moon is.",
             listOf(DesignDef("moon", "Moon", "s"), DesignDef("phase", "Phase", "w"),
-                DesignDef("night", "Night sky", "s", sig = true))),
+                DesignDef("night", "Night sky", "s", sig = true), DesignDef("nighttall", "Tall night sky", "t", sig = true))),
         TypeDef("weather", "Weather", "outside", "The weather in your city: now, the next hours and the week. Updates every half hour.",
             listOf(DesignDef("sky", "Sky", "s", sig = true), DesignDef("skyhours", "Sky and hours", "m", sig = true),
-                DesignDef("now", "Now", "s"), DesignDef("hours", "Next hours", "w"), DesignDef("week", "Week", "m")), isNew = true),
+                DesignDef("now", "Now", "s"), DesignDef("hours", "Next hours", "w"), DesignDef("week", "Week", "m"), DesignDef("skytall", "Tall sky", "t", sig = true)), isNew = true),
         TypeDef("aqi", "Air quality", "outside", "How clean the air is in your city right now, and what it means for going out.",
             listOf(DesignDef("gauge", "Gauge", "s"), DesignDef("strip", "Scale", "w")), isNew = true),
         TypeDef("rates", "Rates", "finance", "Exchange rates, gold and crypto, updated through the day.",
-            listOf(DesignDef("list", "List", "m"), DesignDef("ticker", "Ticker", "w"), DesignDef("one", "One rate", "s")), isNew = true),
+            listOf(DesignDef("list", "List", "m"), DesignDef("ticker", "Ticker", "w"), DesignDef("one", "One rate", "s"), DesignDef("column", "Column", "t")), isNew = true),
     )
     val cats = listOf("all" to "All", "smart" to "Smart", "money" to "Money", "health" to "Health", "habits" to "Habits & goals", "time" to "Time", "work" to "Schedule", "student" to "Student")
     val styles = listOf(Triple("you", "Wallpaper", false), Triple("paper", "Paper", false), Triple("ink", "Ink", false), Triple("tint", "Tint", true), Triple("frost", "Frost", true), Triple("smoke", "Smoke", true), Triple("clear", "Clear", true))
@@ -71,8 +71,8 @@ object Catalog {
     val launch = listOf("countdown", "weather", "aqi", "streak", "spend", "subs", "rates", "counter", "clock", "fast", "pace", "year", "today", "moon", "note", "next", "attendance", "now")
     val visible get() = launch.map { type(it) }
 
-    val sizeName = mapOf("s" to "Small", "w" to "Wide", "m" to "Large")
-    val sizeGrid = mapOf("s" to "2×2", "w" to "4×1", "m" to "4×2")
+    val sizeName = mapOf("s" to "Small", "t" to "Tall", "w" to "Wide", "m" to "Large")
+    val sizeGrid = mapOf("s" to "2×2", "t" to "2×3", "w" to "4×1", "m" to "4×2")
 
     fun defaultRef(t: String): String? = defaultRefIn(t, AppStore.data)
 

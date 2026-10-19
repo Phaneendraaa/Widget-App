@@ -23,6 +23,7 @@ import kotlin.math.max
 
 class WideWidget : BaseWidget() { override val size = "w" }
 class LargeWidget : BaseWidget() { override val size = "m" }
+class TallWidget : BaseWidget() { override val size = "t" }
 
 const val ACT_TAP = "com.phani.widgets.TAP"
 const val ACT_PINNED = "com.phani.widgets.PINNED"
@@ -100,7 +101,7 @@ abstract class BaseWidget : AppWidgetProvider() {
 }
 
 object Widgets {
-    private val providers = listOf(CountdownWidget::class.java to "s", WideWidget::class.java to "w", LargeWidget::class.java to "m")
+    private val providers = listOf(CountdownWidget::class.java to "s", WideWidget::class.java to "w", LargeWidget::class.java to "m", TallWidget::class.java to "t")
 
     fun prepare(ctx: Context) {
         AppStore.load(ctx)
@@ -168,8 +169,8 @@ object Widgets {
         val o = m.getAppWidgetOptions(id)
         var w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).toFloat()
         var h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0).toFloat()
-        if (w <= 0f) w = if (size == "s") 160f else 330f
-        if (h <= 0f) h = when (size) { "s" -> w; "w" -> 84f; else -> 184f }
+        if (w <= 0f) w = baseWidth(size)
+        if (h <= 0f) h = when (size) { "s" -> w; "t" -> w * 1.62f; "w" -> 84f; else -> 184f }
         return w to h
     }
 

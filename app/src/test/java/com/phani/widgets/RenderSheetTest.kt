@@ -31,7 +31,7 @@ class RenderSheetTest {
         val k = 2.5f
         // smallest common launcher sizes: 2x2 ≈ 150dp, 4x1 ≈ 320x76, 4x2 ≈ 320x160
         // real phone home-screen sizes (a vivo/Pixel-class 4-column grid), scaled the way widgets are on the phone
-        val sizes = mapOf("s" to (176f to 176f), "w" to (364f to 92f), "m" to (364f to 192f))
+        val sizes = mapOf("s" to (176f to 176f), "t" to (176f to 285f), "w" to (364f to 92f), "m" to (364f to 192f))
         val items = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, if (t.type == "now") "ink" else "paper", ref = Catalog.defaultRef(t.type)) } } + listOf(
             WConf("t", "spend", "ring", "s", accent = "#9BBF2A", bg = "#1E3A5F", radius = 8, outline = true, title = "Coffee money"),
             WConf("t", "spend", "number", "s", opt = "period"),
@@ -47,7 +47,7 @@ class RenderSheetTest {
         )
         draw(items, sizes, k, File("build/sheet.png"), photo = false)
         // the same designs when the home screen gives them a taller space (resized, or a launcher with tall cells)
-        val tall = mapOf("s" to (176f to 250f), "w" to (364f to 126f), "m" to (300f to 290f))
+        val tall = mapOf("s" to (176f to 250f), "t" to (176f to 360f), "w" to (364f to 126f), "m" to (300f to 290f))
         val plain = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, theme = "paper", ref = Catalog.defaultRef(t.type)) } }
         draw(plain, tall, k, File("build/tall.png"), photo = false)
         // Signature designs in a range of themes, over a photo-like wallpaper so cut-outs and glass show

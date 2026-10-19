@@ -213,7 +213,7 @@ fun GalleryScreen() {
         ) {
             items(items.size) { i ->
                 val (t, d) = items[i]
-                DesignCard(t, d, Modifier.width(if (d.size == "s") 148.dp else 252.dp), boxH = 150.dp, zoom = 0.7f)
+                DesignCard(t, d, Modifier.width(if (com.phani.widgets.widget.narrow(d.size)) 148.dp else 252.dp), boxH = if (items.any { it.second.size == "t" }) 196.dp else 150.dp, zoom = 0.7f)
             }
         }
     }
@@ -250,7 +250,7 @@ private fun SearchResults(q: String, size: String?) {
     var curS: MutableList<Pair<TypeDef, DesignDef>>? = null
     var curW: MutableList<Pair<TypeDef, DesignDef>>? = null
     for (it2 in items) {
-        if (it2.second.size == "s") {
+        if (com.phani.widgets.widget.narrow(it2.second.size)) {
             if (curS == null || curS.size >= smallCols) { curS = mutableListOf(); rows.add(curS) }
             curS.add(it2)
         } else {
@@ -260,7 +260,7 @@ private fun SearchResults(q: String, size: String?) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         rows.forEach { row ->
-            val cols = if (row[0].second.size == "s") smallCols else wideCols
+            val cols = if (com.phani.widgets.widget.narrow(row[0].second.size)) smallCols else wideCols
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f)) }
                 repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
@@ -286,8 +286,8 @@ private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier, boxH: andro
                 Text("✦ " + d.name, style = T.smallB.copy(fontSize = 14.sp), color = p.ink, maxLines = 1)
                 Text("${t.name} · ${Catalog.sizeGrid[d.size]}", style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
             } else {
-                Text(if (d.size == "s") t.name else "${t.name} · ${d.name}", style = T.smallB.copy(fontSize = 14.sp), color = p.ink, maxLines = 1)
-                Text(if (d.size == "s") "${d.name} · ${Catalog.sizeGrid[d.size]}" else "${Catalog.sizeGrid[d.size]} · ${typeBlurb(t.type)}", style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
+                Text(if (com.phani.widgets.widget.narrow(d.size)) t.name else "${t.name} · ${d.name}", style = T.smallB.copy(fontSize = 14.sp), color = p.ink, maxLines = 1)
+                Text(if (com.phani.widgets.widget.narrow(d.size)) "${d.name} · ${Catalog.sizeGrid[d.size]}" else "${Catalog.sizeGrid[d.size]} · ${typeBlurb(t.type)}", style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
             }
         }
     }
@@ -297,7 +297,7 @@ private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier, boxH: andro
 @Composable
 private fun Zoomed(c: WConf, zoom: Float, maxH: Float? = null, onTap: () -> Unit) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        val nw = if (c.size == "s") 160f else 330f
+        val nw = com.phani.widgets.widget.baseWidth(c.size)
         val nh = com.phani.widgets.widget.preferredHeight(c, nw)
         val k = minOf(zoom, maxWidth.value / nw, maxH?.let { it / nh } ?: zoom)
         Box(Modifier.size((nw * k).dp, (nh * k).dp), contentAlignment = Alignment.Center) {
@@ -338,7 +338,7 @@ private fun WidgetCard(c: WConf) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).clickable { Create.startEdit(c) }) {
         Box(Modifier.fillMaxWidth().background(themeBackdrop(com.phani.widgets.widget.Themes.idOf(c.theme) ?: "paper")).padding(14.dp), contentAlignment = Alignment.Center) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
-            WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = true, onTap = { Create.startEdit(c) }) { h ->
+            WidgetView(c, Modifier.widthIn(max = com.phani.widgets.widget.baseWidth(c.size).dp), live = true, onTap = { Create.startEdit(c) }) { h ->
                 if (h.act == "spend-open" || h.act == "fast") ctx.startActivity(com.phani.widgets.QuickActivity.intent(ctx, if (h.act == "fast") "fast" else "spend", c.ref, c.id))
                 else runHit(h, c.id)
             }

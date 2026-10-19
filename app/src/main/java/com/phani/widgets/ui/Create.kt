@@ -259,7 +259,7 @@ private fun SizePicker(c: WConf) {
     val p = pal()
     val t = Catalog.type(c.type)
     val locked = Widgets.isOnPhone(c.id)
-    val sizes = listOf("s", "w", "m").filter { s -> t.designs.any { it.size == s } }
+    val sizes = listOf("s", "t", "w", "m").filter { s -> t.designs.any { it.size == s } }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         sizes.forEach { s ->
             val on = c.size == s
@@ -281,7 +281,7 @@ private fun SizePicker(c: WConf) {
 
 @Composable
 private fun SizeIcon(s: String, color: Color) {
-    val (w, h) = when (s) { "s" -> 18.dp to 18.dp; "w" -> 30.dp to 9.dp; else -> 30.dp to 18.dp }
+    val (w, h) = when (s) { "s" -> 18.dp to 18.dp; "t" -> 13.dp to 20.dp; "w" -> 30.dp to 9.dp; else -> 30.dp to 18.dp }
     Box(Modifier.height(20.dp), contentAlignment = Alignment.Center) {
         Box(Modifier.size(w, h).clip(RoundedCornerShape(4.dp)).border(2.dp, color, RoundedCornerShape(4.dp)))
     }
@@ -293,7 +293,7 @@ fun Preview(c: WConf, sample: Boolean = false, modifier: Modifier = Modifier) {
     AppStore.rev
     val (wbg, _) = wall()
     Box(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(wbg).padding(vertical = 18.dp, horizontal = 18.dp), contentAlignment = Alignment.Center) {
-        WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = false, sample = sample)
+        WidgetView(c, Modifier.widthIn(max = com.phani.widgets.widget.baseWidth(c.size).dp), live = false, sample = sample)
     }
 }
 
@@ -301,7 +301,7 @@ fun Preview(c: WConf, sample: Boolean = false, modifier: Modifier = Modifier) {
 @Composable
 fun Thumb(c: WConf, boxW: Float, boxH: Float, sample: Boolean = false, onTap: (() -> Unit)? = null) {
     AppStore.rev
-    val bw = if (c.size == "s") 160f else 330f
+    val bw = com.phani.widgets.widget.baseWidth(c.size)
     val bh = preferredHeight(c, bw)
     val k = minOf((boxW - 8f) / bw, (boxH - 8f) / bh)
     Box(Modifier.size(boxW.dp, boxH.dp), contentAlignment = Alignment.Center) {

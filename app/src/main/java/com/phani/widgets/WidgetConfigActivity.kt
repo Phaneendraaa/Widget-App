@@ -65,6 +65,7 @@ class WidgetConfigActivity : ComponentActivity() {
         val size = when (info?.provider) {
             ComponentName(this, WideWidget::class.java) -> "w"
             ComponentName(this, LargeWidget::class.java) -> "m"
+            ComponentName(this, com.phani.widgets.widget.TallWidget::class.java) -> "t"
             else -> "s"
         }
 

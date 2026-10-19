@@ -278,11 +278,18 @@ val CORNERS = mapOf("round" to 26f, "soft" to 16f, "sharp" to 6f)
  * Designs are laid out for 160dp (small) or 330dp (wide/large) across; a bigger widget scales everything up
  * evenly instead of leaving small text in a big empty box.
  */
-fun widgetScale(size: String, widthDp: Float): Float = (widthDp / (if (size == "s") 160f else 330f)).coerceIn(0.82f, 1.45f)
+/** Small and Tall are two cells wide; Wide and Large are four. */
+fun narrow(size: String) = size == "s" || size == "t"
+
+/** Natural width (dp) a design is laid out at. */
+fun baseWidth(size: String) = if (narrow(size)) 160f else 330f
+
+fun widgetScale(size: String, widthDp: Float): Float = (widthDp / baseWidth(size)).coerceIn(0.82f, 1.45f)
 
 /** Preferred height in dp for a design when the host gives no size (in-app preview). */
 fun preferredHeight(conf: WConf, widthDp: Float): Float = when (conf.size) {
     "s" -> widthDp
+    "t" -> widthDp * 1.62f
     "w" -> 84f
     else -> when ("${conf.type}/${conf.design}") {
         "streak/heat" -> 224f

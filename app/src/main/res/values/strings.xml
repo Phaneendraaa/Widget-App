@@ -6,5 +6,7 @@
     <string name="widget_name_m">Widget App · Large</string>
     <string name="widget_desc_s">2×2 · spend, fasting, streak, countdown and more</string>
     <string name="widget_desc_w">4×1 · strips, timers, clocks and next up</string>
+    <string name="widget_name_t">Widget App · Tall</string>
+    <string name="widget_desc_t">2×3 · tall glass, rising fast, month of check-ins, tall sky</string>
     <string name="widget_desc_m">4×2 · Right now, heatmaps, lists and progress</string>
 </resources>
