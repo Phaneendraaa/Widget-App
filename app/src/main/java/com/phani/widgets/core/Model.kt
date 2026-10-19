@@ -99,6 +99,9 @@ class AppData(
     val rates: MutableList<String> = mutableListOf(),
     val quotes: MutableMap<String, Quote> = mutableMapOf(),
     var tempF: Boolean = false,
+    /** The last style-drop file downloaded, and when. */
+    var drops: String? = null,
+    var dropsAt: Long = 0L,
 )
 
 /* ---------------- JSON ---------------- */

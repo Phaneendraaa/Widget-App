@@ -19,10 +19,17 @@ class WTheme(
     val font: String = "grotesk", val radius: Int = 26, val alpha: Int = 100, val deco: String? = null,
     /** Second colour for gradient backgrounds. */
     val bg2: String? = null,
+    /** Downloaded with a style drop (shown as New). */
+    val drop: Boolean = false,
 )
 
 object Themes {
-    val all = listOf(
+    /** Every style: the built-in ones, then any downloaded with a style drop. */
+    val all: List<WTheme> get() = base + com.phani.widgets.core.Drops.styles()
+    /** The styles on offer in the picker (downloaded ones until their season ends). */
+    val offered: List<WTheme> get() = base + com.phani.widgets.core.Drops.current()
+
+    private val base = listOf(
         WTheme("paper", "Paper", "Clean and minimal", "paper", accent = "signal"),
         WTheme("midnight", "Midnight", "Deep navy, calm", "paper", bg = "#0F1626", fg = "#E8ECF5", accent = "#7AA2FF", radius = 28),
         WTheme("glass", "Glass", "See-through frosted glass", "paper", bg = "#FFFFFF", fg = "#141414", accent = "#FF5A1F", alpha = 42, radius = 30, deco = "glass"),

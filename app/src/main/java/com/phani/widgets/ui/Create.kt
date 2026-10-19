@@ -484,6 +484,21 @@ private fun CountdownInfo(c: WConf) {
     val x = AppStore.data.dates.firstOrNull { it.id == c.ref } ?: return
     var name by remember(x.id) { mutableStateOf(x.name) }
     UseExisting(c)
+    val popular = com.phani.widgets.core.Drops.upcoming(AppStore.data.cur)
+    if (popular.isNotEmpty() && x.name.isBlank()) {
+        FieldLabel("Popular")
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            popular.forEach { e ->
+                Column(Modifier.clip(RoundedCornerShape(16.dp)).background(pal().card).clickable {
+                    name = e.name
+                    AppStore.change { x.name = e.name; x.date = e.date; x.yearly = false }
+                }.padding(horizontal = 14.dp, vertical = 9.dp)) {
+                    Text(e.name, style = T.smallB, color = pal().ink, maxLines = 1)
+                    Text(Fmt.short(java.time.LocalDate.parse(e.date)), style = T.small.copy(fontSize = 12.sp), color = pal().muted)
+                }
+            }
+        }
+    }
     Field("Name", name, { name = it; AppStore.change { x.name = it.take(40) } }, "My birthday")
     SameName(c, name)
     DateField("Date", x.date) { v -> AppStore.change { x.date = v } }
@@ -655,7 +670,7 @@ private fun StyleSection(c: WConf) {
     }
     FieldLabel("Its own look")
     val cur = c.theme ?: "paper"
-    com.phani.widgets.widget.Themes.all.chunked(2).forEach { row ->
+    com.phani.widgets.widget.Themes.offered.chunked(2).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             row.forEach { t ->
                 val on = cur == t.id

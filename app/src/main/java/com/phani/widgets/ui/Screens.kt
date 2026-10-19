@@ -86,7 +86,7 @@ fun SettingsScreen() {
 
     SectionTitle("Privacy")
     ListCard {
-        Feat(Ic.wifi, "Offline, except live widgets", "Weather, air and rates fetch public data. Only the city or currencies you pick are sent. Everything else is worked out on your phone.")
+        Feat(Ic.wifi, "Offline, except live widgets", "Weather, air and rates fetch public data; only the city or currencies you pick are sent. New styles and popular dates are downloaded from our public file. Everything else is worked out on your phone.")
         Feat(Ic.shield, "No account, no ads, no tracking", "Your data stays on this device and in your own phone backup.")
         Feat(Ic.bolt, "Easy on battery", "Widgets change when you tap them, or when the day or your schedule changes.")
     }

@@ -154,6 +154,7 @@ object Live {
         val q = JSONObject(); d.quotes.forEach { (k, v) -> q.put(k, JSONObject().put("v", v.v).put("ch", v.ch ?: JSONObject.NULL).put("at", v.at)) }
         o.put("quotes", q)
         o.put("tempF", d.tempF)
+        o.put("drops", d.drops ?: JSONObject.NULL).put("dropsAt", d.dropsAt)
         return o
     }
 
@@ -171,6 +172,8 @@ object Live {
         o.optJSONArray("rates")?.let { a -> d.rates.clear(); (0 until a.length()).forEach { d.rates.add(a.getString(it)) } }
         o.optJSONObject("quotes")?.let { q -> q.keys().forEach { k -> val x = q.getJSONObject(k); d.quotes[k] = Quote(x.getDouble("v"), if (x.isNull("ch")) null else x.getDouble("ch"), x.getLong("at")) } }
         d.tempF = o.optBoolean("tempF", d.tempF)
+        d.drops = if (o.isNull("drops")) null else o.optString("drops").ifBlank { null }
+        d.dropsAt = o.optLong("dropsAt", 0L)
     }
 
     /* ---- network ---- */
@@ -267,7 +270,7 @@ object Live {
     private val main = Handler(Looper.getMainLooper())
 
     /** Is anything live set up? (Nothing is fetched otherwise.) */
-    fun wanted(d: AppData): Boolean = d.place != null || d.rates.isNotEmpty()
+    fun wanted(d: AppData): Boolean = d.place != null || d.rates.isNotEmpty() || System.currentTimeMillis() - d.dropsAt > Drops.MS
 
     /**
      * Fetch whatever is out of date (or everything, with [force]) in the background, save it, and redraw the widgets.
@@ -281,18 +284,22 @@ object Live {
         val needA = place != null && (force || now - (d.aq?.at ?: 0) > AQ_MS)
         val keys = d.rates.toList()
         val needQ = keys.isNotEmpty() && (force || keys.any { now - (d.quotes[it]?.at ?: 0) > Q_MS })
-        if (!(needW || needA || needQ) || !busy.compareAndSet(false, true)) { done?.let { main.post(it) }; return }
+        val needD = now - d.dropsAt > Drops.MS
+        if (!(needW || needA || needQ || needD) || !busy.compareAndSet(false, true)) { done?.let { main.post(it) }; return }
         val cur = d.cur
         pool.execute {
             try {
                 val fw = if (needW) pool.submit<Wx?> { fetchWx(place!!) } else null
                 val fa = if (needA) pool.submit<Aq?> { fetchAq(place!!) } else null
                 val fq = if (needQ) pool.submit<Map<String, Quote>> { fetchQuotes(keys, cur) } else null
+                val fd = if (needD) pool.submit<JSONObject?> { get(Drops.URL) } else null
                 val w = runCatching { fw?.get(9, TimeUnit.SECONDS) }.getOrNull()
                 val a = runCatching { fa?.get(9, TimeUnit.SECONDS) }.getOrNull()
                 val q = runCatching { fq?.get(9, TimeUnit.SECONDS) }.getOrNull()
+                val dr = runCatching { fd?.get(9, TimeUnit.SECONDS) }.getOrNull()
                 main.post {
-                    if (w != null || a != null || !q.isNullOrEmpty()) AppStore.change {
+                    if (w != null || a != null || !q.isNullOrEmpty() || dr != null) AppStore.change {
+                        if (dr != null) { drops = dr.toString(); dropsAt = System.currentTimeMillis() }
                         // only keep results for the city that's still picked
                         if (this.place === place) { if (w != null) wx = w; if (a != null) aq = a }
                         q?.forEach { (k, v) -> quotes[k] = v }

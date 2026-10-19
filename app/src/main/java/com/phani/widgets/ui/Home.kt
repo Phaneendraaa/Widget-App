@@ -223,7 +223,7 @@ fun GalleryScreen() {
 @Composable
 private fun SearchResults(q: String, size: String?) {
     val p = pal()
-    val styles = com.phani.widgets.widget.Themes.all.filter { it.name.contains(q, true) || it.blurb.contains(q, true) }
+    val styles = com.phani.widgets.widget.Themes.offered.filter { it.name.contains(q, true) || it.blurb.contains(q, true) }
     if (styles.isNotEmpty()) {
         Text("Styles", style = T.smallB, color = p.muted, modifier = Modifier.padding(bottom = 8.dp))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -139,7 +139,7 @@ private fun phoneWall(id: String): Pair<List<Color>, Boolean> = when (id) {
     "pastel" -> listOf(Color(0xFFFBE2EC), Color(0xFFDFE3FB)) to false
     "ink" -> listOf(Color(0xFFE9E5DD), Color(0xFFCFC9BE)) to false
     "paper" -> listOf(Color(0xFF8EA3B5), Color(0xFF5E7487)) to true
-    else -> { val (bg, fg) = wall(); listOf(bg, bg) to (fg.red + fg.green + fg.blue > 1.5f) }
+    else -> if (id.startsWith("drop_")) listOf(Color(0xFF1C1B22), Color(0xFF3B3946)) to true else { val (bg, fg) = wall(); listOf(bg, bg) to (fg.red + fg.green + fg.blue > 1.5f) }
 }
 
 @Composable
@@ -180,7 +180,7 @@ private fun PhonePreview(t: WTheme, w: Dp) {
 fun StylePicker() {
     AppStore.rev
     val p = pal()
-    val list = Themes.all
+    val list = Themes.offered
     val close = { StyleSheet.open = false; StyleSheet.first = false }
     BackHandler { close() }
     val start = list.indexOfFirst { it.id == AppStore.look }.coerceAtLeast(0)
@@ -213,7 +213,11 @@ fun StylePicker() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Swatch(t, 26.dp)
                 Spacer(Modifier.width(10.dp))
-                Text(t.name, style = T.bodyB.copy(fontSize = 18.sp), color = p.ink, modifier = Modifier.weight(1f))
+                Text(t.name, style = T.bodyB.copy(fontSize = 18.sp), color = p.ink)
+                if (t.drop) Box(Modifier.padding(start = 8.dp).clip(RoundedCornerShape(10.dp)).background(p.ink).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                    Text("New", style = T.smallB.copy(fontSize = 11.sp), color = p.paper)
+                }
+                Spacer(Modifier.weight(1f))
                 Text("${pager.currentPage + 1} of ${list.size}", style = T.small, color = p.muted)
             }
             Text(t.blurb, style = T.small, color = p.muted, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))

@@ -14,6 +14,7 @@ object AppStore {
         private set
     /** The app-wide widget style (safe to read before the data has loaded). */
     val look: String get() = if (::data.isInitialized) data.look else "paper"
+    val dropsRaw: String? get() = if (::data.isInitialized) data.drops else null
     var rev by mutableIntStateOf(0)
         private set
     private var file: File? = null
