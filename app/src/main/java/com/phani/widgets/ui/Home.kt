@@ -65,17 +65,20 @@ object Gallery {
     var query by mutableStateOf("")
     /** Zoom while a pinch is under way; -1 when not pinching. */
     var pinch by mutableStateOf(-1f)
-    val LEVELS = listOf(0.7f, 0.85f, 1f, 1.2f, 1.45f)
-    const val MIN = 0.6f
-    const val MAX = 1.6f
-    fun zoom(): Float = if (pinch > 0f) pinch else AppStore.data.zoom
+    val LEVELS = listOf(0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1f, 1.2f, 1.4f)
+    const val MIN = 0.5f
+    const val MAX = 1.4f
+    /** The zoom the tabs are laid out at. */
+    fun zoom(): Float = AppStore.data.zoom
+    /** What the zoom control shows: the live pinch, or the saved zoom. */
+    fun shown(): Float = if (pinch > 0f) pinch else AppStore.data.zoom
     fun setZoom(z: Float) = AppStore.change { zoom = z.coerceIn(MIN, MAX) }
     fun zoomIn() { val z = zoom(); setZoom(LEVELS.firstOrNull { it > z + 0.01f } ?: MAX) }
     fun zoomOut() { val z = zoom(); setZoom(LEVELS.lastOrNull { it < z - 0.01f } ?: MIN) }
 }
 
 /** Pinch with two fingers to zoom the previews; one finger still scrolls and swipes as usual. */
-private fun Modifier.pinchZoom(): Modifier = pointerInput(Unit) {
+internal fun Modifier.pinchZoom(): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
         var z = Gallery.zoom()
@@ -95,10 +98,10 @@ private fun Modifier.pinchZoom(): Modifier = pointerInput(Unit) {
 
 /** − 100% + : make the previews smaller to see more at once, or bigger to see detail. Tap the number to reset. */
 @Composable
-private fun ZoomControl() {
+internal fun ZoomControl() {
     AppStore.rev
     val p = pal()
-    val z = Gallery.zoom()
+    val z = Gallery.shown()
     Row(Modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.card).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).clickable(enabled = z > Gallery.MIN + 0.01f) { Gallery.zoomOut() }, contentAlignment = Alignment.Center) {
             Icon(Ic.minus, "Zoom out", tint = if (z > Gallery.MIN + 0.01f) p.ink else p.muted.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
@@ -169,8 +172,7 @@ fun GalleryScreen() {
     SearchBar()
     val q = Gallery.query.trim()
     if (q.isNotEmpty()) { SearchResults(q, size); return }
-    val z = Gallery.zoom()
-    Column(Modifier.pinchZoom()) {
+    Column {
     NEEDS.forEach { n ->
         val items = n.types.flatMap { ty -> val t = Catalog.type(ty); t.designs.filter { size == null || it.size == size }.map { t to it } }
             .sortedByDescending { it.second.sig } // Signature designs lead
@@ -191,7 +193,7 @@ fun GalleryScreen() {
         ) {
             items(items.size) { i ->
                 val (t, d) = items[i]
-                DesignCard(t, d, Modifier.width(if (d.size == "s") (148 * z).dp else (252 * z).dp), boxH = (150 * z).dp, zoom = 0.7f * z)
+                DesignCard(t, d, Modifier.width(if (d.size == "s") 148.dp else 252.dp), boxH = 150.dp, zoom = 0.7f)
             }
         }
     }
@@ -236,11 +238,11 @@ private fun SearchResults(q: String, size: String?) {
             curW.add(it2)
         }
     }
-    Column(Modifier.pinchZoom(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         rows.forEach { row ->
             val cols = if (row[0].second.size == "s") smallCols else wideCols
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f), zoom = 0.78f * z) }
+                row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f)) }
                 repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
@@ -291,7 +293,7 @@ fun MineScreen() {
     AppStore.rev
     val p = pal()
     val d = AppStore.data
-    TopTitle("My widgets")
+    TopTitle("My widgets") { ZoomControl() }
     if (d.placed.isEmpty()) {
         Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Nothing here yet", style = T.h3, color = p.ink)

@@ -55,7 +55,7 @@ fun SettingsScreen() {
     val p = pal()
     val d = AppStore.data
     Spacer(Modifier.height(12.dp))
-    TopBar("Settings", "Works offline. Nothing leaves your phone.")
+    TopBar("Settings", "Works offline. Nothing leaves your phone.") { ZoomControl() }
 
     SectionTitle("App appearance")
     Seg(listOf("auto" to "Auto", "light" to "Light", "dark" to "Dark"), d.theme) { AppStore.change { theme = it } }

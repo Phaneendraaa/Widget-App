@@ -19,6 +19,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.phani.widgets.core.AppStore
 
@@ -37,16 +39,28 @@ fun AppShell() {
     val scroll = scrolls.getOrPut(Nav.screen) { androidx.compose.foundation.ScrollState(0) }
     Box(Modifier.fillMaxSize().background(p.paper)) {
         if (Nav.screen != "home") BackHandler { Nav.screen = "home" }
-        Column(
-            Modifier.fillMaxSize().verticalScroll(scroll)
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = Pad)
-                .padding(top = 8.dp, bottom = 120.dp),
+        val z = Gallery.zoom()
+        val outer = androidx.compose.ui.platform.LocalDensity.current
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(outer.density * z, outer.fontScale),
         ) {
-            when (Nav.screen) {
-                "settings" -> SettingsScreen()
-                "mine" -> MineScreen()
-                else -> GalleryScreen()
+            Column(
+                Modifier.fillMaxSize().pinchZoom()
+                    .graphicsLayer {
+                        val live = Gallery.pinch
+                        if (live > 0f) { scaleX = live / z; scaleY = live / z; transformOrigin = TransformOrigin(0.5f, 0f) }
+                    }
+                    .verticalScroll(scroll)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = Pad)
+                    // room for the bottom bar, which keeps its normal size
+                    .padding(top = 8.dp, bottom = (120f / z).dp),
+            ) {
+                when (Nav.screen) {
+                    "settings" -> SettingsScreen()
+                    "mine" -> MineScreen()
+                    else -> GalleryScreen()
+                }
             }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = Pad).padding(bottom = 14.dp)) {
