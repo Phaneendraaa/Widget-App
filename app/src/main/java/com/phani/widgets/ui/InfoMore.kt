@@ -394,6 +394,12 @@ internal fun StatsCard(c: com.phani.widgets.core.WConf) {
         "counter" -> d.counters.firstOrNull { it.id == c.ref }?.log?.isNotEmpty() == true
         "streak" -> d.habits.firstOrNull { it.id == c.ref }?.done?.isNotEmpty() == true
         "fast" -> d.fast.history.isNotEmpty()
+        "countdown" -> if (c.design == "stack") d.dates.any { it.name.isNotBlank() } else d.dates.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
+        "subs" -> d.subs.isNotEmpty()
+        "pace" -> d.goals.firstOrNull { it.id == c.ref }?.name?.isNotBlank() == true
+        "attendance" -> d.subjects.isNotEmpty()
+        "next" -> d.sched.values.any { it.isNotEmpty() }
+        "year", "today", "moon" -> true
         else -> false
     }
     if (!has) return
@@ -404,6 +410,13 @@ internal fun StatsCard(c: com.phani.widgets.core.WConf) {
             "counter" -> d.counters.firstOrNull { it.id == c.ref }?.let { CounterStats(it, days7) }
             "streak" -> d.habits.firstOrNull { it.id == c.ref }?.let { HabitStats(it) }
             "fast" -> FastStats(days7)
+            "countdown" -> CountdownStats(c)
+            "subs" -> SubsStats()
+            "pace" -> d.goals.firstOrNull { it.id == c.ref }?.let { PaceStats(it) }
+            "attendance" -> ClassStats()
+            "next" -> SchedStats()
+            "year", "today" -> TimeStats()
+            "moon" -> MoonStats()
         }
     }
 }
@@ -458,4 +471,79 @@ private fun FastStats(days7: List<String>) {
     val recent = hrs.takeLast(10)
     StatRow(listOf(Fmt.hhmm(recent.average()) to "average (last ${recent.size})", Fmt.hhmm(hrs.max()) to "longest", "${hrs.count { it >= d.fast.target }}" to "reached the goal"))
     WeekBars(days7.map { k -> hs.filter { java.time.Instant.ofEpochMilli(it.end).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString() == k }.sumOf { (it.end - it.start) / 3_600_000.0 } }, d.fast.target.toDouble()) { "${it.toInt()}h" }
+}
+
+
+@Composable
+private fun CountdownStats(c: com.phani.widgets.core.WConf) {
+    val d = AppStore.data
+    val t = com.phani.widgets.core.today()
+    if (c.design == "stack") {
+        val l = d.dates.filter { it.name.isNotBlank() }.map { it to com.phani.widgets.core.dateNext(it) }.sortedBy { it.second.days }
+        StatRow(listOf("${l.size}" to "countdowns", "${l.first().second.days}" to "days to ${l.first().first.name}", "${l.count { it.second.days <= 30 }}" to "in the next 30 days"))
+        return
+    }
+    val x = d.dates.firstOrNull { it.id == c.ref } ?: return
+    val n = com.phani.widgets.core.dateNext(x)
+    val weekends = (0 until n.days).count { t.plusDays(it.toLong()).dayOfWeek == java.time.DayOfWeek.SATURDAY }
+    val w = n.days / 7; val r = n.days % 7
+    StatRow(listOf("${n.days}" to "days left", (if (w > 0) "${w}w ${r}d" else "${r}d") to "weeks and days", "$weekends" to "weekends before it"))
+    StatRow(listOf(n.d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()) to "day of the week", "${n.days * 24}" to "hours left", (if (x.yearly) "Yearly" else "Once") to "repeats"))
+}
+
+@Composable
+private fun SubsStats() {
+    val d = AppStore.data
+    val m = com.phani.widgets.core.subsMonthly()
+    val next30 = d.subs.map { com.phani.widgets.core.subNext(it) }.filter { it.days <= 30 }.sumOf { it.s.amt }
+    val top = d.subs.maxByOrNull { if (it.cycle == "year") it.amt / 12 else it.amt }
+    StatRow(listOf(Fmt.money(m, 0) to "a month", Fmt.money(m * 12, 0) to "a year", Fmt.money(next30, 0) to "due in 30 days"))
+    if (top != null) StatRow(listOf(top.name to "costs the most", "${d.subs.size}" to "subscriptions", Fmt.money(m / 30, 2) to "a day, all together"))
+}
+
+@Composable
+private fun PaceStats(g: com.phani.widgets.core.Goal) {
+    val t = com.phani.widgets.core.today()
+    val r = com.phani.widgets.core.pace(g)
+    val started = maxOf(1, java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(g.start), t).toInt())
+    val rate = g.done / started
+    val finish = if (rate > 0) t.plusDays(((g.target - g.done) / rate).toLong()) else null
+    StatRow(listOf("${(r.pct * 100).toInt()}%" to "done", Fmt.trimNum((r.per * 10).toInt() / 10.0) to "${g.unit} a day needed", Fmt.trimNum((rate * 10).toInt() / 10.0) to "${g.unit} a day so far"))
+    StatRow(listOf((finish?.let { Fmt.short(it) } ?: "—") to "finish at this pace", "${r.left}" to "days to the deadline",
+        (if (r.ahead >= 1) "${r.ahead.toInt()}d ahead" else if (r.ahead <= -1) "${(-r.ahead).toInt()}d behind" else "On track") to "where you are"))
+}
+
+@Composable
+private fun ClassStats() {
+    val d = AppStore.data
+    val a = d.subjects.sumOf { it.a }; val tt = d.subjects.sumOf { it.t }
+    val risk = d.subjects.count { !com.phani.widgets.core.att(it).ok }
+    val canMiss = d.subjects.sumOf { com.phani.widgets.core.att(it).skip }
+    StatRow(listOf("${if (tt > 0) a * 100 / tt else 100}%" to "overall", "$risk" to "below ${d.req}%", "$canMiss" to "classes you can miss"))
+}
+
+@Composable
+private fun SchedStats() {
+    val d = AppStore.data
+    val counts = (0..6).map { i -> i to (d.sched[i]?.size ?: 0) }
+    val busiest = counts.maxByOrNull { it.second }
+    val today = d.sched[com.phani.widgets.core.dayIndex()]?.size ?: 0
+    StatRow(listOf("$today" to "today", "${counts.sumOf { it.second }}" to "each week", (busiest?.let { Fmt.dowName(it.first) } ?: "—") to "busiest day"))
+}
+
+@Composable
+private fun TimeStats() {
+    val t = com.phani.widgets.core.today()
+    val wk = t.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+    StatRow(listOf("${t.dayOfYear}" to "day of the year", "Week $wk" to "of 52", "${t.lengthOfYear() - t.dayOfYear}" to "days left this year"))
+}
+
+@Composable
+private fun MoonStats() {
+    val days = (System.currentTimeMillis() / 86_400_000.0) - 10_962.6
+    val a = ((days / 29.530588853) % 1.0).let { if (it < 0) it + 1 else it }
+    val t = com.phani.widgets.core.today()
+    val full = t.plusDays((((0.5 - a) % 1.0 + 1.0) % 1.0 * 29.53).toLong())
+    val new = t.plusDays((((1.0 - a) % 1.0 + 1.0) % 1.0 * 29.53).toLong())
+    StatRow(listOf(Fmt.short(full) to "next full moon", Fmt.short(new) to "next new moon", "${(a * 29.53).toInt()}" to "days into the cycle"))
 }
