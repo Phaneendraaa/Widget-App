@@ -459,9 +459,9 @@ object Signature {
             color = 0xFFFBFAF5.toInt(); setShadowLayer(px(5f), 0f, px(2.5f), 0x55000000)
         })
         val inset = cw * 0.065f
-        val ph = ch - inset - 36f
+        val ph = ch - inset - 40f
         photo(left + inset, top + inset, cw - 2 * inset, ph)
-        para(text, left + inset, top + inset + ph + 6f, cw - 2 * inset, 13.5f, WFonts.serifItalic(), 0xFF2B2A26.toInt(), 0f, 1.0f, 2)
+        para(text, left + inset, top + inset + ph + 5f, cw - 2 * inset, 12.5f, WFonts.serifItalic(), 0xFF2B2A26.toInt(), 0f, 0.95f, 2)
         // a strip of tape
         c.rotate(6f, px(W / 2), px(top))
         rrect(W / 2 - 18f, top - 7f, 36f, 13f, 1.5f, fill(0x99F3E7C8.toInt()))
