@@ -542,23 +542,27 @@ object Signature {
         if (lit) c.drawCircle(px(cx), px(by - fh * 0.42f), px(fh * 0.75f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = RadialGradient(px(cx), px(by - fh * 0.42f), px(fh * 0.75f), 0x55FF7A1F, 0x00FF7A1F, Shader.TileMode.CLAMP)
         })
-        fun shape(k: Float, oy: Float): Path {
-            val fhh = fh * k; val fww = fw * k; val b = by - oy
+        /** A flame: round base, narrow body, tip leaning right. */
+        fun shape(k: Float, oy: Float, dx: Float = 0f): Path {
+            val h2 = fh * k; val w2 = fw * k; val b = by - oy; val x0 = cx + dx
             return Path().apply {
-                moveTo(px(cx), px(b))
-                cubicTo(px(cx - fww * 0.58f), px(b), px(cx - fww * 0.52f), px(b - fhh * 0.52f), px(cx - fww * 0.06f), px(b - fhh))
-                cubicTo(px(cx + fww * 0.06f), px(b - fhh * 0.72f), px(cx + fww * 0.62f), px(b - fhh * 0.56f), px(cx + fww * 0.5f), px(b - fhh * 0.22f))
-                cubicTo(px(cx + fww * 0.42f), px(b + fhh * 0.02f), px(cx + fww * 0.1f), px(b), px(cx), px(b))
+                moveTo(px(x0), px(b))
+                cubicTo(px(x0 - w2 * 0.52f), px(b - h2 * 0.04f), px(x0 - w2 * 0.58f), px(b - h2 * 0.40f), px(x0 - w2 * 0.24f), px(b - h2 * 0.62f))
+                cubicTo(px(x0 - w2 * 0.04f), px(b - h2 * 0.78f), px(x0 - w2 * 0.14f), px(b - h2 * 0.92f), px(x0 + w2 * 0.06f), px(b - h2))
+                cubicTo(px(x0 + w2 * 0.12f), px(b - h2 * 0.82f), px(x0 + w2 * 0.40f), px(b - h2 * 0.72f), px(x0 + w2 * 0.44f), px(b - h2 * 0.48f))
+                cubicTo(px(x0 + w2 * 0.56f), px(b - h2 * 0.22f), px(x0 + w2 * 0.40f), px(b), px(x0), px(b))
                 close()
             }
         }
-        val outer = shape(1f, 0f)
-        c.drawPath(outer, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = if (lit) LinearGradient(0f, px(by), 0f, px(by - fh), intArrayOf(0xFFFF3D1F.toInt(), 0xFFFF8A1F.toInt(), 0xFFFFD45A.toInt()), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
-                     else LinearGradient(0f, px(by), 0f, px(by - fh), a(0.35f, p.fg), a(0.12f, p.fg), Shader.TileMode.CLAMP)
-        })
-        if (lit) c.drawPath(shape(0.52f, fh * 0.04f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = LinearGradient(0f, px(by), 0f, px(by - fh * 0.5f), 0xFFFFF6D0.toInt(), 0xFFFFC23D.toInt(), Shader.TileMode.CLAMP)
+        val hot = intArrayOf(0xFFFF3D1F.toInt(), 0xFFFF8A1F.toInt(), 0xFFFFD45A.toInt())
+        val ember = intArrayOf(a(0.55f, 0xFFB4441E.toInt()), a(0.40f, 0xFFD9762E.toInt()), a(0.25f, 0xFFE9A04A.toInt()))
+        val cols = if (lit) hot else ember
+        fun grad(top: Float) = LinearGradient(0f, px(by), 0f, px(top), cols, floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+        // a smaller tongue behind, then the main flame, then the bright core
+        c.drawPath(shape(0.62f, 0f, -fw * 0.30f), Paint(Paint.ANTI_ALIAS_FLAG).apply { shader = grad(by - fh * 0.62f); alpha = 200 })
+        c.drawPath(shape(1f, 0f), Paint(Paint.ANTI_ALIAS_FLAG).apply { shader = grad(by - fh) })
+        c.drawPath(shape(0.5f, fh * 0.03f, fw * 0.02f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(0f, px(by), 0f, px(by - fh * 0.5f), if (lit) 0xFFFFF6D0.toInt() else a(0.35f, 0xFFFFE2B0.toInt()), if (lit) 0xFFFFC23D.toInt() else a(0.2f, 0xFFF0B060.toInt()), Shader.TileMode.CLAMP)
         })
         // the number
         val rx = W * 0.5f
@@ -566,7 +570,7 @@ object Signature {
         val nb = H * 0.5f + cap(sz) / 2
         num(st.n.toString(), rx, nb, sz, p.fg)
         small(if (st.n == 1) "day streak" else "day streak", rx, nb + 15f, maxW = W - rx - pad)
-        small(if (lit) "Lit today" else "Check in to light it", rx, nb + 30f, if (lit) p.acc else p.mut, 11.5f, maxW = W - rx - pad + 6f, weight = 600)
+        small(if (lit) "Lit today" else "Not lit yet", rx, nb + 30f, if (lit) p.acc else p.mut, 11.5f, maxW = W - rx - pad + 6f, weight = 600)
     }
 
     /* ---------- Fasting sun arc ---------- */
@@ -634,8 +638,9 @@ object Signature {
         fun poly(vararg pts: Pair<Float, Float>): Path = Path().apply {
             pts.forEachIndexed { i, (u, v) -> val (xx, yy) = P(u, v); if (i == 0) moveTo(px(xx), px(yy)) else lineTo(px(xx), px(yy)) }; close()
         }
-        c.drawPath(poly(0f to 1f, 0.16f to 0.64f, 0.27f to 0.72f, 0.52f to 0.08f, 0.70f to 0.42f, 0.80f to 0.34f, 1f to 0.86f, 1f to 1f), fill(a(0.11f, p.fg)))
-        c.drawPath(poly(0f to 1f, 0.16f to 0.64f, 0.27f to 0.72f, 0.52f to 0.08f, 0.46f to 1f), fill(a(0.07f, p.fg)))
+        val light = luma(p.bg or 0xFF000000.toInt()) > 0.5f
+        c.drawPath(poly(0f to 1f, 0.16f to 0.64f, 0.27f to 0.72f, 0.52f to 0.08f, 0.70f to 0.42f, 0.80f to 0.34f, 1f to 0.86f, 1f to 1f), fill(a(if (light) 0.17f else 0.11f, p.fg)))
+        c.drawPath(poly(0f to 1f, 0.16f to 0.64f, 0.27f to 0.72f, 0.52f to 0.08f, 0.46f to 1f), fill(a(if (light) 0.10f else 0.07f, p.fg)))
         val snow = if (luma(p.bg or 0xFF000000.toInt()) > 0.5f) 0xFFFFFFFF.toInt() else a(0.9f, 0xFFEFF2F7.toInt())
         c.drawPath(poly(0.45f to 0.21f, 0.52f to 0.08f, 0.60f to 0.22f, 0.565f to 0.19f, 0.53f to 0.25f, 0.495f to 0.19f), fill(snow))
         // the trail, walked so far in colour
