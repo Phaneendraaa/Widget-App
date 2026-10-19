@@ -61,6 +61,20 @@ class RenderSheetTest {
             sigs.map { (t, d) -> WConf("t", t.type, d.id, d.size, theme = th, ref = Catalog.defaultRef(t.type)) }
         }
         draw(sig2, sizes, k, File("build/sig2.png"), photo = true)
+        // downloaded styles (the drops file in the repo), so each new seasonal look is checked before it goes out
+        val dropsFile = File("../drops/drops.json")
+        if (dropsFile.exists()) {
+            AppStore.data.drops = dropsFile.readText()
+            val dropItems = com.phani.widgets.core.Drops.styles().flatMap { th -> listOf(
+                WConf("t", "countdown", "big", "s", theme = th.id, ref = Catalog.defaultRef("countdown")),
+                WConf("t", "streak", "flame", "s", theme = th.id, ref = Catalog.defaultRef("streak")),
+                WConf("t", "weather", "now", "s", theme = th.id),
+                WConf("t", "spend", "metal", "m", theme = th.id),
+                WConf("t", "countdown", "pass", "m", theme = th.id, ref = Catalog.defaultRef("countdown")),
+                WConf("t", "rates", "ticker", "w", theme = th.id),
+            ) }
+            draw(dropItems, sizes, k, File("build/drops.png"), photo = true)
+        }
     }
 
     private fun draw(items: List<WConf>, sizes: Map<String, Pair<Float, Float>>, k: Float, f: File, photo: Boolean) {
