@@ -35,6 +35,11 @@ class RenderSheetTest {
         val items = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, if (t.type == "now") "ink" else "paper", ref = Catalog.defaultRef(t.type)) } } + listOf(
             WConf("t", "spend", "ring", "s", accent = "#9BBF2A", bg = "#1E3A5F", radius = 8, outline = true, title = "Coffee money"),
             WConf("t", "spend", "number", "s", opt = "period"),
+        ) + com.phani.widgets.widget.Themes.all.flatMap { th -> listOf(
+            WConf("t", "countdown", "big", "s", theme = th.id, ref = Catalog.defaultRef("countdown")),
+            WConf("t", "streak", "heat", "m", theme = th.id),
+            WConf("t", "clock", "pair", "w", theme = th.id),
+        ) } + listOf(
             WConf("t", "spend", "strip", "w", opt = "week"),
             WConf("t", "spend", "receipt", "m", opt = "period"),
             WConf("t", "countdown", "flip", "w", accent = "#D6409F", bg = "#FDE2E4", alpha = 70, title = "Goa trip", ref = Catalog.defaultRef("countdown")),
@@ -44,7 +49,7 @@ class RenderSheetTest {
         val colW = (370 * k).toInt()
         val cells = items.map { c ->
             val (w, h) = sizes.getValue(c.size)
-            renderWidget(c, (w * k).toInt(), (h * k).toInt(), k * com.phani.widgets.widget.widgetScale(c.size, w), sample = true).bitmap to "${c.type}/${c.design}"
+            renderWidget(c, (w * k).toInt(), (h * k).toInt(), k * com.phani.widgets.widget.widgetScale(c.size, w), sample = true).bitmap to "${c.type}/${c.design}" + (c.theme?.let { " · $it" } ?: "")
         }
         val cols = 3
         val rowsH = cells.chunked(cols).map { r -> r.maxOf { it.first.height } + (24 * k).toInt() + gap }

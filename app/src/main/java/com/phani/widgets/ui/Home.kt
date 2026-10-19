@@ -158,8 +158,9 @@ fun GalleryScreen() {
 private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier) {
     val p = pal()
     val (wbg, _) = wall()
-    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, if (Math.floorMod((t.type + d.id).hashCode(), 3) == 0) "ink" else "paper")
-    val open = { Create.startFrom(t.type, d.id, Gallery.bindId); Gallery.bindId = -1; Gallery.size = null }
+    val show = listOf("paper", "midnight", "modern", "retro", "paper", "neon", "pastel", "ink", "ocean", "newspaper", "terminal", "sunset")
+    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, theme = show[Math.floorMod((t.type + d.id).hashCode(), show.size)])
+    val open = { Create.startFrom(t.type, d.id, Gallery.bindId, conf.theme); Gallery.bindId = -1; Gallery.size = null }
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(p.card).clickable { open() }) {
         Box(Modifier.fillMaxWidth().background(wbg).padding(10.dp), contentAlignment = Alignment.Center) {
             Zoomed(conf, 0.78f) { open() }

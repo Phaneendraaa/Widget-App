@@ -298,7 +298,9 @@ fun renderWidget(conf: WConf, wPx: Int, hPx: Int, density: Float, sample: Boolea
     try { return draw(conf.copy(ref = Catalog.defaultRefIn(conf.type, AppStore.sample)), wPx, hPx, density) } finally { AppStore.previewing = false }
 }
 
-private fun draw(conf: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
+private fun draw(conf0: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
+    val theme = Themes.get(conf0.theme)
+    val conf = Themes.resolve(conf0)
     val (wbg, wfg) = wallColors()
     val bmp = Bitmap.createBitmap(max(1, wPx), max(1, hPx), Bitmap.Config.ARGB_8888)
     val c = Canvas(bmp)
@@ -309,6 +311,7 @@ private fun draw(conf: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
     c.save()
     c.clipPath(clip)
     if (pal.bg != 0) c.drawColor(pal.bg)
+    if (theme != null) Themes.under(c, theme, wPx.toFloat(), hPx.toFloat(), density)
     if (conf.outline) {
         val s = ctx.stroke(argb(0.28f, pal.fg), 1.5f)
         c.drawRoundRect(RectF(0.75f * density, 0.75f * density, wPx - 0.75f * density, hPx - 0.75f * density), r * density, r * density, s)
@@ -317,6 +320,7 @@ private fun draw(conf: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
         c.drawRoundRect(RectF(0.5f * density, 0.5f * density, wPx - 0.5f * density, hPx - 0.5f * density), r * density, r * density, s)
     }
     try { Designs.draw(ctx) } catch (e: Exception) { ctx.small("Couldn't draw this widget", 16f, 30f) }
+    if (theme != null) Themes.over(c, theme, wPx.toFloat(), hPx.toFloat(), density, r * density, pal.fg, pal.acc)
     if (!AppStore.previewing && AppStore.undoShownOn(conf.id)) ctx.undoButton()
     c.restore()
     return Rendered(bmp, ctx.hits)

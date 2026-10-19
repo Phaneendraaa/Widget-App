@@ -41,6 +41,8 @@ data class WConf(
     val title: String? = null,
     /** A per-widget option, e.g. what a spending widget shows: "day", "week" or "period". */
     val opt: String? = null,
+    /** A ready-made look (see Themes). When set it decides colours, type and corners. */
+    val theme: String? = null,
 )
 
 class AppData(
@@ -95,13 +97,13 @@ fun WConf.toJson(): JSONObject = JSONObject()
     .put("id", id).put("type", type).put("design", design).put("size", size).put("style", style)
     .put("accent", accent).put("font", font).put("corner", corner).put("label", label).put("ref", ref ?: JSONObject.NULL)
     .put("bg", bg ?: JSONObject.NULL).put("fg", fg ?: JSONObject.NULL).put("alpha", alpha).put("radius", radius)
-    .put("outline", outline).put("title", title ?: JSONObject.NULL).put("opt", opt ?: JSONObject.NULL)
+    .put("outline", outline).put("title", title ?: JSONObject.NULL).put("opt", opt ?: JSONObject.NULL).put("theme", theme ?: JSONObject.NULL)
 
 fun wconf(o: JSONObject) = WConf(
     o.getString("id"), o.getString("type"), o.getString("design"), o.getString("size"),
     o.optString("style", "paper"), o.optString("accent", "signal"), o.optString("font", "grotesk"),
     o.optString("corner", "round"), o.optBoolean("label", true), o.optStr("ref"),
-    o.optStr("bg"), o.optStr("fg"), o.optInt("alpha", 100), o.optInt("radius", -1), o.optBoolean("outline", false), o.optStr("title"), o.optStr("opt"),
+    o.optStr("bg"), o.optStr("fg"), o.optInt("alpha", 100), o.optInt("radius", -1), o.optBoolean("outline", false), o.optStr("title"), o.optStr("opt"), o.optStr("theme"),
 )
 
 fun AppData.toJson(): JSONObject {

@@ -81,7 +81,7 @@ object Create {
     var adding by mutableStateOf(false)
     private var madeRef: String? = null
 
-    fun startFrom(type: String, design: String, bindId: Int = -1) {
+    fun startFrom(type: String, design: String, bindId: Int = -1, theme: String? = null) {
         val t = Catalog.type(type)
         val d = t.designs.firstOrNull { it.id == design } ?: t.designs[0]
         val ref = when (type) {
@@ -93,7 +93,7 @@ object Create {
             else -> null
         }
         madeRef = ref
-        conf = WConf(uid(), type, d.id, d.size, ref = ref)
+        conf = WConf(uid(), type, d.id, d.size, ref = ref, theme = theme ?: "paper")
         this.bindId = bindId; editing = false; adding = false; open = true
     }
 
@@ -170,7 +170,7 @@ fun CreateScreen() {
             SectionHead("2", "Size on your home screen", null)
             SizePicker(c)
             Spacer(Modifier.height(4.dp))
-            SectionHead("3", "Style", "Optional. Change colours, text and shape.")
+            SectionHead("3", "Theme", "Pick a look. Each one is made to fit every widget.")
             StyleSection(c)
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = Pad).padding(top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -518,30 +518,48 @@ private fun ClockInfo() {
 
 /* ---------------- Style ---------------- */
 
+/** Pick a ready-made theme. Every theme is designed to work with every widget, so there's nothing else to tweak. */
 @Composable
 private fun StyleSection(c: WConf) {
     AppStore.rev
-    var tab by remember { mutableStateOf("design") }
-    val set: (WConf) -> Unit = { Create.conf = it }
     val p = pal()
-    val many = Catalog.type(c.type).designs.count { it.size == c.size } > 1
-    val tabs = (if (many) listOf("design" to "Design") else emptyList()) + listOf("colour" to "Colour", "text" to "Text", "shape" to "Shape")
-    val cur = if (tabs.any { it.first == tab }) tab else tabs[0].first
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        tabs.forEach { (k, l) ->
-            val on = cur == k
-            Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.ink else Color.Transparent).clickable { tab = k },
-                contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.muted) }
+    val set: (WConf) -> Unit = { Create.conf = it }
+    if (Catalog.type(c.type).designs.count { it.size == c.size } > 1) {
+        FieldLabel("Layout")
+        DesignTab(c, set)
+        Spacer(Modifier.height(4.dp))
+    }
+    FieldLabel("Theme")
+    val cur = c.theme ?: "paper"
+    com.phani.widgets.widget.Themes.all.chunked(2).forEach { row ->
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            row.forEach { t ->
+                val on = cur == t.id
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(p.card)
+                    .then(if (on) Modifier.border(2.dp, p.ink, RoundedCornerShape(20.dp)) else Modifier)
+                    .clickable { set(c.copy(theme = t.id, title = null, bg = null, fg = null, alpha = 100, radius = -1, outline = false)) }.padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(themeBackdrop(t.id)), contentAlignment = Alignment.Center) {
+                        Thumb(c.copy(id = "th" + t.id, theme = t.id), 156f, 108f) { set(c.copy(theme = t.id)) }
+                    }
+                    Column(Modifier.padding(horizontal = 4.dp)) {
+                        Text(t.name, style = T.smallB, color = p.ink)
+                        Text(t.blurb, style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
+                    }
+                }
+            }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
         }
     }
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        when (cur) {
-            "design" -> DesignTab(c, set)
-            "colour" -> ColourTab(c, set)
-            "text" -> TextTab(c, set)
-            else -> ShapeTab(c, set)
-        }
-    }
+}
+
+/** See-through themes are shown over a photo-like backdrop so the glass effect is visible. */
+@Composable
+internal fun themeBackdrop(id: String): androidx.compose.ui.graphics.Brush {
+    val (wbg, _) = wall()
+    return if (id == "glass" || id == "glassdark" || id == "clear")
+        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF2B5876), Color(0xFFD38A5C), Color(0xFFF2C38B)))
+    else androidx.compose.ui.graphics.Brush.linearGradient(listOf(wbg, wbg))
 }
 
 @Composable
