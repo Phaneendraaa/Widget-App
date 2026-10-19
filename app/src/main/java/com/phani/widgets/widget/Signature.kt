@@ -16,6 +16,10 @@ import com.phani.widgets.core.DateItem
 import com.phani.widgets.core.DateNext
 import com.phani.widgets.core.Fmt
 import com.phani.widgets.core.dateNext
+import com.phani.widgets.core.cnt
+import com.phani.widgets.core.fastState
+import com.phani.widgets.core.pace
+import com.phani.widgets.core.streak
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.TextStyle
@@ -57,6 +61,10 @@ object Signature {
             "countdown/photo", "countdown/photowide" -> photoCountdown(x)
             "today/photo" -> photoDate(x)
             "note/polaroid" -> polaroid(x)
+            "counter/liquid" -> liquid(x)
+            "streak/flame" -> flame(x)
+            "fast/arc" -> sunArc(x)
+            "pace/climb" -> summit(x)
             else -> return false
         }
         return true
@@ -466,5 +474,193 @@ object Signature {
         c.rotate(6f, px(W / 2), px(top))
         rrect(W / 2 - 18f, top - 7f, 36f, 13f, 1.5f, fill(0x99F3E7C8.toInt()))
         c.restore()
+    }
+
+    /* ---------- Water glass ---------- */
+
+    private fun liquid(x: Ctx) = with(x) {
+        val ct = D.counters.firstOrNull { it.id == conf.ref } ?: D.counters.firstOrNull() ?: run { nothing("Add a counter"); return@with }
+        val v = cnt(ct)
+        val pct = (v.toFloat() / ct.goal).coerceIn(0f, 1f)
+        if (showLabel) label(ttl(ct.name), pad, pad + 11.5f, W - 2 * pad)
+        val bh = min(32f, H * 0.2f); val btnY = H - pad - bh
+        val gTop = pad + 22f; val gBot = btnY - 9f; val gh = gBot - gTop; val gw = gh * 0.64f
+        val gx = pad + 2f
+        val glass = Path().apply {
+            moveTo(px(gx), px(gTop)); lineTo(px(gx + gw), px(gTop))
+            lineTo(px(gx + gw * 0.88f), px(gBot - 5f)); quadTo(px(gx + gw * 0.86f), px(gBot), px(gx + gw * 0.78f), px(gBot))
+            lineTo(px(gx + gw * 0.22f), px(gBot)); quadTo(px(gx + gw * 0.14f), px(gBot), px(gx + gw * 0.12f), px(gBot - 5f)); close()
+        }
+        c.save(); c.clipPath(glass)
+        c.drawPath(glass, fill(a(0.06f, p.fg)))
+        if (pct > 0f) {
+            val level = gBot - (gh - 3f) * pct
+            fun wave(phase: Float, amp: Float, col: Int, shader: Shader?) {
+                val path = Path(); path.moveTo(px(gx - 2f), px(gBot + 2f))
+                var xx = gx - 2f
+                while (xx <= gx + gw + 2f) {
+                    path.lineTo(px(xx), px(level + amp * sin(((xx - gx) / gw) * 2.6f * PI.toFloat() + phase)))
+                    xx += 1.5f
+                }
+                path.lineTo(px(gx + gw + 2f), px(gBot + 2f)); path.close()
+                c.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = col; this.shader = shader })
+            }
+            wave(1.6f, 2.2f, a(0.35f, p.acc), null)
+            wave(0f, 2.4f, p.acc, LinearGradient(0f, px(level), 0f, px(gBot), a(0.82f, p.acc), p.acc, Shader.TileMode.CLAMP))
+            listOf(0.3f to 0.75f, 0.62f to 0.55f, 0.45f to 0.88f, 0.72f to 0.82f).forEach { (bx, by) ->
+                val yy = gBot - (gBot - level) * (1f - by)
+                if (yy > level + 4f) circle(gx + gw * bx, yy, 1.6f, stroke(a(0.7f, WHITE), 0.8f))
+            }
+        }
+        c.restore()
+        c.drawPath(glass, stroke(a(0.55f, p.fg), 1.6f).apply { strokeJoin = Paint.Join.ROUND })
+        line(gx + gw * 0.2f, gTop + 6f, gx + gw * 0.28f, gBot - 10f, stroke(a(0.35f, WHITE), 1.6f))
+        // the count
+        val rx = gx + gw + 14f
+        val sz = fit(v.toString(), min(46f, gh * 0.62f), W - rx - pad)
+        num(v.toString(), rx, gTop + 4f + cap(sz), sz, if (v >= ct.goal) p.acc else p.fg)
+        small("of ${ct.goal} ${ct.unit}", rx, gTop + 4f + cap(sz) + 16f, maxW = W - rx - pad)
+        if (v >= ct.goal) small("Goal reached", rx, gTop + 4f + cap(sz) + 31f, p.acc, 11.5f, maxW = W - rx - pad, weight = 600)
+        val mw = 44f
+        button(pad, btnY, mw, bh, "ghost", "cnt-", ct.id, ic = Paths.minus, icSize = 13f)
+        button(pad + mw + 6f, btnY, W - 2 * pad - mw - 6f, bh, "solid", "cnt", ct.id, text = "+1")
+    }
+
+    /* ---------- Streak flame ---------- */
+
+    private fun flame(x: Ctx) = with(x) {
+        val h = D.habits.firstOrNull { it.id == conf.ref } ?: D.habits.firstOrNull() ?: run { nothing("Add a habit"); return@with }
+        val st = streak(h)
+        if (showLabel) label(ttl(h.name), pad, pad + 11.5f, W - 2 * pad - 44f)
+        button(W - pad - 36f, pad - 6f, 36f, 36f, if (st.today) "ghost" else "acc", "hab", h.id, ic = Paths.check)
+        val grow = 0.55f + 0.45f * min(1f, st.n / 30f)
+        val by = H - pad - 2f
+        val fh = (H - pad - 30f - pad) * grow
+        val fw = fh * 0.66f
+        val cx = pad + (W * 0.46f - pad) / 2 + 4f
+        val lit = st.today
+        if (lit) c.drawCircle(px(cx), px(by - fh * 0.42f), px(fh * 0.75f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = RadialGradient(px(cx), px(by - fh * 0.42f), px(fh * 0.75f), 0x55FF7A1F, 0x00FF7A1F, Shader.TileMode.CLAMP)
+        })
+        fun shape(k: Float, oy: Float): Path {
+            val fhh = fh * k; val fww = fw * k; val b = by - oy
+            return Path().apply {
+                moveTo(px(cx), px(b))
+                cubicTo(px(cx - fww * 0.58f), px(b), px(cx - fww * 0.52f), px(b - fhh * 0.52f), px(cx - fww * 0.06f), px(b - fhh))
+                cubicTo(px(cx + fww * 0.06f), px(b - fhh * 0.72f), px(cx + fww * 0.62f), px(b - fhh * 0.56f), px(cx + fww * 0.5f), px(b - fhh * 0.22f))
+                cubicTo(px(cx + fww * 0.42f), px(b + fhh * 0.02f), px(cx + fww * 0.1f), px(b), px(cx), px(b))
+                close()
+            }
+        }
+        val outer = shape(1f, 0f)
+        c.drawPath(outer, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = if (lit) LinearGradient(0f, px(by), 0f, px(by - fh), intArrayOf(0xFFFF3D1F.toInt(), 0xFFFF8A1F.toInt(), 0xFFFFD45A.toInt()), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+                     else LinearGradient(0f, px(by), 0f, px(by - fh), a(0.35f, p.fg), a(0.12f, p.fg), Shader.TileMode.CLAMP)
+        })
+        if (lit) c.drawPath(shape(0.52f, fh * 0.04f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(0f, px(by), 0f, px(by - fh * 0.5f), 0xFFFFF6D0.toInt(), 0xFFFFC23D.toInt(), Shader.TileMode.CLAMP)
+        })
+        // the number
+        val rx = W * 0.5f
+        val sz = fit(st.n.toString(), min(50f, H * 0.34f), W - rx - pad)
+        val nb = H * 0.5f + cap(sz) / 2
+        num(st.n.toString(), rx, nb, sz, p.fg)
+        small(if (st.n == 1) "day streak" else "day streak", rx, nb + 15f, maxW = W - rx - pad)
+        small(if (lit) "Lit today" else "Check in to light it", rx, nb + 30f, if (lit) p.acc else p.mut, 11.5f, maxW = W - rx - pad + 6f, weight = 600)
+    }
+
+    /* ---------- Fasting sun arc ---------- */
+
+    private fun sunArc(x: Ctx) = with(x) {
+        val f = fastState()
+        if (showLabel) label(ttl(if (f.on) "Fasting · goal ${f.target}h" else "Fast · ${f.target}h goal"), pad, pad + 11.5f, W - 2 * pad - 80f)
+        button(W - pad - 72f, pad - 7f, 72f, 30f, if (f.on) "ghost" else "solid", "fast", text = if (f.on) "End" else "Start")
+        val cy = H - pad - 20f
+        val r = min(W / 2 - 46f, cy - (pad + 34f))
+        val cx = W / 2
+        val oval = android.graphics.RectF(px(cx - r), px(cy - r), px(cx + r), px(cy + r))
+        val track = stroke(a(0.22f, p.fg), 2f); track.strokeCap = Paint.Cap.ROUND; track.pathEffect = DashPathEffect(floatArrayOf(px(2f), px(5f)), 0f)
+        c.drawArc(oval, 180f, 180f, false, track); track.pathEffect = null
+        line(cx - r - 22f, cy, cx + r + 22f, cy, stroke(a(0.18f, p.fg), 1f))
+        val pct = f.pct.toFloat()
+        if (f.on && pct > 0.005f) {
+            val pr = stroke(p.acc, 4.5f)
+            c.drawArc(oval, 180f, 180f * pct, false, pr)
+        }
+        // the sun, travelling the arc from start to goal
+        val ang = PI * (1 - pct)
+        val sx = cx + r * cos(ang).toFloat(); val sy = cy - r * sin(ang).toFloat()
+        if (f.on) {
+            c.drawCircle(px(sx), px(sy), px(16f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = RadialGradient(px(sx), px(sy), px(16f), a(0.45f, p.acc), a(0f, p.acc), Shader.TileMode.CLAMP)
+            })
+            for (i in 0 until 8) {
+                val t = i * PI / 4
+                line(sx + 9.5f * cos(t).toFloat(), sy + 9.5f * sin(t).toFloat(), sx + 13f * cos(t).toFloat(), sy + 13f * sin(t).toFloat(), stroke(p.acc, 1.4f))
+            }
+            circle(sx, sy, 6.5f, fill(p.acc))
+        }
+        // the time
+        val tx = if (f.on) Fmt.hhmm(f.h) else "0:00"
+        val ts = fit(tx, min(32f, r * 0.42f), r * 1.3f)
+        num(tx, cx, cy - 14f, ts, p.fg, C)
+        small(if (!f.on) "Ready when you are" else if (f.h >= f.target) "Goal reached" else "${((1 - f.pct) * f.target).let { Fmt.hhmm(it) }} to go", cx, cy - 1f, if (f.on && f.h >= f.target) p.acc else p.mut, 11f, C)
+        if (f.on) {
+            val start = f.endMs - f.target * 3_600_000L
+            small(Fmt.at(start), cx - r, cy + 15f, size = 11f, align = C)
+            small(Fmt.at(f.endMs), cx + r, cy + 15f, size = 11f, align = C)
+        }
+    }
+
+    /* ---------- Goal summit ---------- */
+
+    private fun summit(x: Ctx) = with(x) {
+        val g = D.goals.firstOrNull { it.id == conf.ref } ?: D.goals.firstOrNull() ?: run { nothing("Add a goal"); return@with }
+        val r = pace(g)
+        val pct = r.pct.toFloat().coerceIn(0f, 1f)
+        val colW = W * 0.42f
+        if (showLabel) label(ttl(g.name), pad, pad + 11.5f, colW - 4f)
+        val ps = "${(pct * 100).roundToInt()}%"
+        val sz = fit(ps, min(40f, H * 0.26f), colW - pad)
+        num(ps, pad, pad + 24f + cap(sz), sz, p.fg)
+        small("${Fmt.trimNum(g.done)} of ${Fmt.trimNum(g.target)} ${g.unit}", pad, pad + 24f + cap(sz) + 16f, maxW = colW - 4f)
+        val ahead = r.ahead.roundToInt()
+        small(if (ahead <= -1) "${-ahead} days behind" else if (ahead >= 1) "$ahead days ahead" else "On track", pad, pad + 24f + cap(sz) + 31f,
+            if (ahead <= -1) p.acc else p.fg, 11.5f, maxW = colW - 4f, weight = 600)
+        button(pad, H - pad - 30f, 30f, 30f, "solid", "goal", g.id, ic = Paths.plus, icSize = 14f)
+        // the mountain
+        val mx0 = W * 0.38f; val mx1 = W + 4f; val my0 = pad + 4f; val my1 = H + 2f
+        fun P(u: Float, v: Float) = (mx0 + (mx1 - mx0) * u) to (my0 + (my1 - my0) * v)
+        fun poly(vararg pts: Pair<Float, Float>): Path = Path().apply {
+            pts.forEachIndexed { i, (u, v) -> val (xx, yy) = P(u, v); if (i == 0) moveTo(px(xx), px(yy)) else lineTo(px(xx), px(yy)) }; close()
+        }
+        c.drawPath(poly(0f to 1f, 0.16f to 0.64f, 0.27f to 0.72f, 0.52f to 0.08f, 0.70f to 0.42f, 0.80f to 0.34f, 1f to 0.86f, 1f to 1f), fill(a(0.11f, p.fg)))
+        c.drawPath(poly(0f to 1f, 0.16f to 0.64f, 0.27f to 0.72f, 0.52f to 0.08f, 0.46f to 1f), fill(a(0.07f, p.fg)))
+        val snow = if (luma(p.bg or 0xFF000000.toInt()) > 0.5f) 0xFFFFFFFF.toInt() else a(0.9f, 0xFFEFF2F7.toInt())
+        c.drawPath(poly(0.45f to 0.21f, 0.52f to 0.08f, 0.60f to 0.22f, 0.565f to 0.19f, 0.53f to 0.25f, 0.495f to 0.19f), fill(snow))
+        // the trail, walked so far in colour
+        val trail = listOf(0.06f to 0.97f, 0.24f to 0.80f, 0.15f to 0.66f, 0.34f to 0.52f, 0.28f to 0.40f, 0.45f to 0.27f, 0.52f to 0.10f).map { P(it.first, it.second) }
+        val seg = trail.zipWithNext { p1, p2 -> sqrt((p2.first - p1.first) * (p2.first - p1.first) + (p2.second - p1.second) * (p2.second - p1.second)) }
+        val total = seg.sum()
+        val dash = stroke(a(0.4f, p.fg), 1.4f); dash.pathEffect = DashPathEffect(floatArrayOf(px(2.5f), px(3f)), 0f)
+        val tp = Path().apply { moveTo(px(trail[0].first), px(trail[0].second)); trail.drop(1).forEach { lineTo(px(it.first), px(it.second)) } }
+        c.drawPath(tp, dash); dash.pathEffect = null
+        var left = total * pct; var hx = trail[0].first; var hy = trail[0].second
+        val done = Path().apply { moveTo(px(hx), px(hy)) }
+        for (i in seg.indices) {
+            if (left <= 0f) break
+            val t = min(1f, left / seg[i])
+            hx = trail[i].first + (trail[i + 1].first - trail[i].first) * t
+            hy = trail[i].second + (trail[i + 1].second - trail[i].second) * t
+            done.lineTo(px(hx), px(hy)); left -= seg[i]
+        }
+        c.drawPath(done, stroke(p.acc, 2.4f).apply { strokeJoin = Paint.Join.ROUND })
+        // flag on the summit
+        val (fx, fy) = P(0.52f, 0.08f)
+        line(fx, fy, fx, fy - 16f, stroke(p.fg, 1.4f))
+        c.drawPath(Path().apply { moveTo(px(fx), px(fy - 16f)); lineTo(px(fx + 11f), px(fy - 12.5f)); lineTo(px(fx), px(fy - 9f)); close() }, fill(p.acc))
+        // you, on the trail
+        circle(hx, hy, 6f, fill(p.bg or 0xFF000000.toInt()))
+        circle(hx, hy, 4.5f, fill(p.acc))
     }
 }
