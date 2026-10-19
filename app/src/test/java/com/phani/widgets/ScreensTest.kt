@@ -59,8 +59,8 @@ class ScreensTest {
         step { com.phani.widgets.ui.StyleSheet.pick("glass") }; shot("Style: Glass")
         step { com.phani.widgets.ui.StyleSheet.pick("paper"); com.phani.widgets.ui.StyleSheet.open = true }; shot("Choose your style")
         step { com.phani.widgets.ui.StyleSheet.open = false }
-        step { com.phani.widgets.ui.Gallery.cat = "sig" }; shot("Widgets, Signature tab")
-        step { com.phani.widgets.ui.Gallery.cat = "all"; Create.startFrom("countdown", "big") }; shot("Editor, new")
+        step { com.phani.widgets.ui.Gallery.size = "s" }; shot("Widgets, small only")
+        step { com.phani.widgets.ui.Gallery.size = null; Create.startFrom("countdown", "big") }; shot("Editor, new")
         step { val c = Create.conf!!; AppStore.change { dates.first { it.id == c.ref }.name = "Lisbon trip" } }; shot("Editor, filled")
         step { Create.conf = Create.conf!!.copy(design = "flip", size = "w") }; shot("Editor, Wide size")
         step { Create.commit(); Create.adding = true }; shot("Add to home screen")
@@ -93,9 +93,8 @@ class ScreensTest {
         step { Create.close(); Create.startFrom("attendance", "bars") }; shot("Editor, attendance")
         step { Create.close(); Create.startFrom("next", "card") }; shot("Editor, schedule")
         step { Create.close(); Create.startFrom("moon", "moon") }; shot("Editor, moon")
-        step { Create.close(); Nav.screen = "home"; com.phani.widgets.ui.Gallery.cat = "today" }; shot("Widgets, Date tab")
-        step { com.phani.widgets.ui.Gallery.cat = "attendance" }; shot("Widgets, tab far right")
-        step { com.phani.widgets.ui.Gallery.cat = "all"; com.phani.widgets.ui.Gallery.query = "ring" }; shot("Search: ring")
+        step { Create.close(); Nav.screen = "home"; com.phani.widgets.ui.Gallery.query = "glass" }; shot("Search: glass")
+        step { com.phani.widgets.ui.Gallery.query = "ring" }; shot("Search: ring")
         step { com.phani.widgets.ui.Gallery.query = ""; Nav.screen = "settings" }; shot("Settings")
 
         val k = 0.36f

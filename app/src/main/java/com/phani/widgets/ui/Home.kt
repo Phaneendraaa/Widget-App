@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -89,6 +90,18 @@ private fun TopTitle(title: String) {
 
 /* ---------------- Gallery: every design, straight away ---------------- */
 
+/** What people want on their screen, in plain words. Each need is one row to swipe through. */
+private class Need(val title: String, val sub: String, val types: List<String>)
+
+private val NEEDS = listOf(
+    Need("Count down to a day", "Trips, birthdays, exams, launches", listOf("countdown")),
+    Need("Money", "What's safe to spend, and what renews next", listOf("spend", "subs")),
+    Need("Habits & goals", "Streaks you keep, goals with a deadline", listOf("streak", "pace")),
+    Need("Health", "Water, fasting, anything you count", listOf("counter", "fast")),
+    Need("Time & date", "Today, world clocks, the year, the moon", listOf("today", "clock", "year", "moon")),
+    Need("Your day", "What needs you, what's next, classes, notes", listOf("now", "next", "attendance", "note")),
+)
+
 @Composable
 fun GalleryScreen() {
     AppStore.rev
@@ -104,31 +117,56 @@ fun GalleryScreen() {
         }
     }
     SearchBar()
-    if (Gallery.query.isBlank() && Gallery.size == null && Gallery.cat == "all") Packs()
-    // category tabs: the row slides along by itself so the next tabs come into view
-    val cats = listOf("all" to "All", "sig" to "✦ Signature") + Catalog.visible.map { it.type to it.name }
-    val tabState = androidx.compose.foundation.lazy.rememberLazyListState()
-    androidx.compose.runtime.LaunchedEffect(Gallery.cat) {
-        val i = cats.indexOfFirst { it.first == Gallery.cat }.coerceAtLeast(0)
-        tabState.animateScrollToItem(maxOf(0, i - 1))
-    }
-    androidx.compose.foundation.lazy.LazyRow(state = tabState, modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(cats.size) { idx ->
-            val (k, l) = cats[idx]
-            val on = Gallery.cat == k
-            Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.ink else p.card).clickable { Gallery.cat = k }.padding(horizontal = 14.dp),
-                contentAlignment = Alignment.Center) { Text(l, style = T.smallB.copy(fontSize = 14.sp), color = if (on) p.paper else p.ink) }
+    val q = Gallery.query.trim()
+    if (q.isNotEmpty()) { SearchResults(q, size); return }
+    NEEDS.forEach { n ->
+        val items = n.types.flatMap { ty -> val t = Catalog.type(ty); t.designs.filter { size == null || it.size == size }.map { t to it } }
+            .sortedByDescending { it.second.sig } // Signature designs lead
+        if (items.isEmpty()) return@forEach
+        Column(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp)) {
+            Text(n.title, style = T.bodyB.copy(fontSize = 19.sp), color = p.ink)
+            Text(n.sub, style = T.small, color = p.muted)
+        }
+        // the row runs to the screen edges, so the next card peeks in and invites a swipe
+        androidx.compose.foundation.lazy.LazyRow(
+            Modifier.fillMaxWidth().padding(bottom = 20.dp).layout { m, c ->
+                val extra = Pad.roundToPx() * 2
+                val pl = m.measure(c.copy(minWidth = c.maxWidth + extra, maxWidth = c.maxWidth + extra))
+                layout(c.maxWidth, pl.height) { pl.place(-extra / 2, 0) }
+            },
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Pad),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            items(items.size) { i ->
+                val (t, d) = items[i]
+                DesignCard(t, d, Modifier.width(if (d.size == "s") 156.dp else 286.dp), boxH = 168.dp)
+            }
         }
     }
-    val q = Gallery.query.trim()
-    val items = Catalog.visible.filter { q.isNotEmpty() || Gallery.cat == "all" || Gallery.cat == "sig" || it.type == Gallery.cat }
-        .flatMap { t -> t.designs.filter { (size == null || it.size == size) && (Gallery.cat != "sig" || q.isNotEmpty() || it.sig) }.map { t to it } }
-        .sortedByDescending { it.second.sig } // Signature designs lead
-        .filter { (t, d) -> q.isEmpty() || listOf(t.name, d.name, t.desc, typeBlurb(t.type), Catalog.sizeName[d.size] ?: "").any { it.contains(q, ignoreCase = true) } }
-    if (q.isNotEmpty()) Text(if (items.isEmpty()) "No widgets match \u201c$q\u201d" else "${items.size} result" + (if (items.size == 1) "" else "s"),
+}
+
+/** Search finds widgets by what they do, their design and size, and styles by name. */
+@Composable
+private fun SearchResults(q: String, size: String?) {
+    val p = pal()
+    val styles = com.phani.widgets.widget.Themes.all.filter { it.name.contains(q, true) || it.blurb.contains(q, true) }
+    if (styles.isNotEmpty()) {
+        Text("Styles", style = T.smallB, color = p.muted, modifier = Modifier.padding(bottom = 8.dp))
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            styles.forEach { t ->
+                Row(Modifier.clip(RoundedCornerShape(18.dp)).background(p.card).clickable { StyleSheet.pick(t.id); Toaster.show("Your widgets now use ${t.name}") }
+                    .padding(start = 8.dp, end = 14.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Swatch(t, 24.dp)
+                    Text(t.name, style = T.smallB, color = p.ink, modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        }
+    }
+    val items = Catalog.visible.flatMap { t -> t.designs.filter { size == null || it.size == size }.map { t to it } }
+        .filter { (t, d) -> listOf(t.name, d.name, t.desc, typeBlurb(t.type), Catalog.sizeName[d.size] ?: "").any { it.contains(q, ignoreCase = true) } }
+        .sortedByDescending { it.second.sig }
+    Text(if (items.isEmpty()) "No widgets match \u201c$q\u201d" else "${items.size} result" + (if (items.size == 1) "" else "s"),
         style = T.small, color = p.muted, modifier = Modifier.padding(bottom = 10.dp))
-    if (items.isEmpty()) { if (q.isEmpty()) Text("No designs in this size here yet.", style = T.body, color = p.muted); return }
     // small designs pair up, wide and large take the whole row
     val rows = mutableListOf<List<Pair<TypeDef, DesignDef>>>()
     var half: Pair<TypeDef, DesignDef>? = null
@@ -137,16 +175,7 @@ fun GalleryScreen() {
         else rows.add(listOf(it2))
     }
     half?.let { rows.add(listOf(it)) }
-    Column(Modifier.pointerInput(Unit) {
-        var dx = 0f
-        detectHorizontalDragGestures(onDragStart = { dx = 0f }, onDragEnd = {
-            if (Gallery.query.isBlank() && kotlin.math.abs(dx) > 120f) {
-                val i = cats.indexOfFirst { it.first == Gallery.cat }.coerceAtLeast(0)
-                val j = (if (dx < 0) i + 1 else i - 1).coerceIn(0, cats.size - 1)
-                Gallery.cat = cats[j].first
-            }
-        }) { _, d -> dx += d }
-    }, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         rows.forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { (t, d) -> DesignCard(t, d, Modifier.weight(1f)) }
@@ -157,15 +186,16 @@ fun GalleryScreen() {
 }
 
 @Composable
-private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier) {
+private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier, boxH: androidx.compose.ui.unit.Dp? = null) {
     AppStore.rev
     val p = pal()
     // every design is shown in the user's own style, so what they see is what they get
     val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, theme = com.phani.widgets.widget.Themes.APP)
     val open = { Create.startFrom(t.type, d.id, Gallery.bindId, conf.theme); Gallery.bindId = -1; Gallery.size = null }
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(p.card).clickable { open() }) {
-        Box(Modifier.fillMaxWidth().background(themeBackdrop(AppStore.look)).padding(10.dp), contentAlignment = Alignment.Center) {
-            Zoomed(conf, 0.78f) { open() }
+        Box(Modifier.fillMaxWidth().then(if (boxH != null) Modifier.height(boxH) else Modifier).background(themeBackdrop(AppStore.look)).padding(10.dp),
+            contentAlignment = Alignment.Center) {
+            Zoomed(conf, 0.78f, maxH = boxH?.let { it.value - 20f }) { open() }
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
             if (d.sig) {
@@ -181,11 +211,11 @@ private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier) {
 
 /** Draws a widget at its normal size, then shrinks it like zooming out, so nothing inside re-flows or breaks. */
 @Composable
-private fun Zoomed(c: WConf, zoom: Float, onTap: () -> Unit) {
+private fun Zoomed(c: WConf, zoom: Float, maxH: Float? = null, onTap: () -> Unit) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         val nw = if (c.size == "s") 160f else 330f
-        val k = minOf(zoom, maxWidth.value / nw)
         val nh = com.phani.widgets.widget.preferredHeight(c, nw)
+        val k = minOf(zoom, maxWidth.value / nw, maxH?.let { it / nh } ?: zoom)
         Box(Modifier.size((nw * k).dp, (nh * k).dp), contentAlignment = Alignment.Center) {
             WidgetView(c, Modifier.requiredWidth(nw.dp).graphicsLayer(scaleX = k, scaleY = k), live = false, sample = true, onTap = onTap)
         }
@@ -268,86 +298,3 @@ fun BottomTabs() {
 
 /* ---------------- starter packs ---------------- */
 
-private class Pack(val name: String, val what: String, val make: com.phani.widgets.core.AppData.() -> List<WConf>)
-
-private val PACKS = listOf(
-    Pack("Fitness", "Workout streak, water, fasting") {
-        val h = com.phani.widgets.core.uid(); val c = com.phani.widgets.core.uid()
-        habits.add(com.phani.widgets.core.Habit(h, "Workout", 0, 1, mutableSetOf(), mutableSetOf()))
-        counters.add(com.phani.widgets.core.Counter(c, "Water", "glasses", 8, mutableMapOf()))
-        listOf(WConf(com.phani.widgets.core.uid(), "streak", "big", "s", "ink", ref = h),
-            WConf(com.phani.widgets.core.uid(), "counter", "glass", "s", accent = "cobalt", ref = c),
-            WConf(com.phani.widgets.core.uid(), "fast", "timer", "w"))
-    },
-    Pack("Study", "Exam countdown, classes, next up") {
-        val e = com.phani.widgets.core.uid()
-        dates.add(com.phani.widgets.core.DateItem(e, "Exams", com.phani.widgets.core.today().plusDays(30).toString(), false))
-        listOf(WConf(com.phani.widgets.core.uid(), "countdown", "big", "s", accent = "lilac", ref = e),
-            WConf(com.phani.widgets.core.uid(), "attendance", "single", "s"),
-            WConf(com.phani.widgets.core.uid(), "next", "card", "w", "ink"))
-    },
-    Pack("Money", "Safe to spend, renewals, savings") {
-        val g = com.phani.widgets.core.uid()
-        goals.add(com.phani.widgets.core.Goal(g, "Savings", cur, 1000.0, 0.0, com.phani.widgets.core.today().toString(), com.phani.widgets.core.today().plusDays(180).toString(), 50.0))
-        listOf(WConf(com.phani.widgets.core.uid(), "spend", "ring", "s", accent = "mint"),
-            WConf(com.phani.widgets.core.uid(), "subs", "next", "s", "ink", "sun"),
-            WConf(com.phani.widgets.core.uid(), "pace", "bar", "w", ref = g))
-    },
-    Pack("Everyday", "Date, moon, a note to self") {
-        val n = com.phani.widgets.core.uid()
-        notes.add(com.phani.widgets.core.Note(n, "Be kind. Drink water. Go outside."))
-        listOf(WConf(com.phani.widgets.core.uid(), "today", "day", "s", "you"),
-            WConf(com.phani.widgets.core.uid(), "moon", "moon", "s", "ink"),
-            WConf(com.phani.widgets.core.uid(), "note", "banner", "w", ref = n))
-    },
-)
-
-/** One tap sets up three matching widgets; each can then be filled in and added to the home screen. */
-@Composable
-private fun Packs() {
-    val p = pal()
-    Text("Quick start", style = T.smallB, color = p.muted, modifier = Modifier.padding(bottom = 8.dp))
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        PACKS.forEach { pk ->
-            Column(Modifier.width(168.dp).clip(RoundedCornerShape(20.dp)).background(p.card).clickable {
-                var added = 0
-                AppStore.change(true) {
-                    val made = pk.make(this).map { w -> dedupeRef(this, w) }
-                    val fresh = made.filter { w -> placed.none { it.type == w.type && it.design == w.design && it.ref == w.ref } }
-                    placed.addAll(0, fresh); added = fresh.size
-                }
-                Nav.screen = "mine"
-                Toaster.show(if (added == 0) "You already have the ${pk.name} widgets" else "${pk.name}: $added widgets added. Tap one to fill it in, then Add.", added > 0)
-            }.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(pk.name, style = T.bodyB.copy(fontSize = 16.sp), color = p.ink)
-                Text(pk.what, style = T.small, color = p.muted, maxLines = 2, minLines = 2)
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Ic.plus, null, tint = p.ink, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Add 3 widgets", style = T.smallB, color = p.ink)
-                }
-            }
-        }
-    }
-}
-
-
-/** If a pack just made something the user already had by that name, point at theirs and drop the copy. */
-private fun dedupeRef(d: com.phani.widgets.core.AppData, w: WConf): WConf {
-    val r = w.ref ?: return w
-    fun <T> pick(l: MutableList<T>, id: (T) -> String, name: (T) -> String): WConf {
-        val mine = l.firstOrNull { id(it) == r } ?: return w
-        val old = l.firstOrNull { id(it) != r && name(it).equals(name(mine), ignoreCase = true) } ?: return w
-        l.remove(mine)
-        return w.copy(ref = id(old))
-    }
-    return when (w.type) {
-        "streak" -> pick(d.habits, { it.id }, { it.name })
-        "counter" -> pick(d.counters, { it.id }, { it.name })
-        "countdown" -> pick(d.dates, { it.id }, { it.name })
-        "pace" -> pick(d.goals, { it.id }, { it.name })
-        "note" -> pick(d.notes, { it.id }, { it.text })
-        else -> w
-    }
-}
