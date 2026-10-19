@@ -547,3 +547,33 @@ private fun MoonStats() {
     val new = t.plusDays((((1.0 - a) % 1.0 + 1.0) % 1.0 * 29.53).toLong())
     StatRow(listOf(Fmt.short(full) to "next full moon", Fmt.short(new) to "next new moon", "${(a * 29.53).toInt()}" to "days into the cycle"))
 }
+
+/* ---------------- photo ---------------- */
+
+/** Pick a photo for photo widgets. Uses Android's photo picker, so no permission is needed. */
+@Composable
+internal fun PhotoField(c: com.phani.widgets.core.WConf) {
+    val p = pal()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var busy by remember { mutableStateOf(false) }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        busy = true
+        val name = com.phani.widgets.widget.Photos.save(ctx, uri)
+        busy = false
+        if (name == null) { Toaster.show("Couldn't use that photo"); return@rememberLauncherForActivityResult }
+        val old = c.photo
+        Create.conf = c.copy(photo = name)
+        if (old != null && AppStore.data.placed.none { it.photo == old }) com.phani.widgets.widget.Photos.delete(old)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FieldLabel("Photo")
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BigButton(if (busy) "Adding…" else if (c.photo == null) "Choose a photo" else "Change photo", Modifier.weight(1f), kind = if (c.photo == null) "solid" else "ghost") {
+                pick.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }
+            if (c.photo != null) BigButton("Remove", Modifier.weight(0.6f), kind = "ghost") { Create.conf = c.copy(photo = null) }
+        }
+        Text(if (c.photo == null) "Until you pick one, it shows a sunset." else "Your photo stays on this phone.", style = T.small, color = p.muted)
+    }
+}

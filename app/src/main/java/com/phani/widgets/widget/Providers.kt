@@ -99,6 +99,7 @@ object Widgets {
 
     fun prepare(ctx: Context) {
         AppStore.load(ctx)
+        Photos.init(ctx)
         Dyn.load(ctx)
         WFonts.init(ctx.assets)
         if (AppStore.onChanged == null) {

@@ -42,6 +42,9 @@ object Signature {
     private fun a(alpha: Float, c: Int) = ((alpha * 255).roundToInt().coerceIn(0, 255) shl 24) or (c and 0xFFFFFF)
     private val clear = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
 
+    /** Designs that draw their own shape instead of the usual card (a polaroid floating on the wallpaper). */
+    fun freeform(c: com.phani.widgets.core.WConf) = c.type == "note" && c.design == "polaroid"
+
     /** Draws the design if it's a signature one; returns false otherwise. */
     fun draw(x: Ctx): Boolean {
         when ("${x.conf.type}/${x.conf.design}") {
@@ -51,6 +54,9 @@ object Signature {
             "today/tear" -> tear(x, countdown = false)
             "clock/word" -> wordClock(x)
             "moon/night" -> nightMoon(x)
+            "countdown/photo", "countdown/photowide" -> photoCountdown(x)
+            "today/photo" -> photoDate(x)
+            "note/polaroid" -> polaroid(x)
             else -> return false
         }
         return true
@@ -361,5 +367,104 @@ object Signature {
         val toFull = (((0.5 - age) % 1.0 + 1.0) % 1.0 * 29.53).roundToInt()
         text(phaseName(age), W / 2, H - pad - 16f, 14f, uiFace(600), white, -0.01f, C, W - 2 * pad)
         text(if (toFull == 0) "Full moon tonight" else "Full moon in $toFull day" + (if (toFull == 1) "" else "s"), W / 2, H - pad - 1f, 11f, uiFace(400), a(0.65f, white), 0f, C, W - 2 * pad)
+    }
+
+    /* ---------- Photo widgets ---------- */
+
+    private val bmpPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+    /** The user's photo, cropped to fill; or a calm dusk landscape until they pick one. */
+    private fun Ctx.photo(x0: Float, y0: Float, w: Float, h: Float) {
+        val dst = android.graphics.RectF(px(x0), px(y0), px(x0 + w), px(y0 + h))
+        val b = Photos.get(conf.photo)
+        if (b != null) {
+            val sr = b.width / b.height.toFloat(); val dr = dst.width() / dst.height()
+            val src = if (sr > dr) { val cw = (b.height * dr).toInt(); android.graphics.Rect((b.width - cw) / 2, 0, (b.width + cw) / 2, b.height) }
+                      else { val ch = (b.width / dr).toInt(); android.graphics.Rect(0, (b.height - ch) / 2, b.width, (b.height + ch) / 2) }
+            c.drawBitmap(b, src, dst, bmpPaint)
+            return
+        }
+        c.save(); c.clipRect(dst)
+        c.drawRect(dst, Paint().apply { shader = LinearGradient(0f, dst.top, 0f, dst.bottom,
+            intArrayOf(0xFF24305E.toInt(), 0xFF8D5B8C.toInt(), 0xFFF08A5D.toInt(), 0xFFF9C784.toInt()), floatArrayOf(0f, 0.45f, 0.75f, 1f), Shader.TileMode.CLAMP) })
+        c.drawCircle(dst.centerX() + dst.width() * 0.18f, dst.top + dst.height() * 0.62f, dst.height() * 0.13f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xD9FFE6B0.toInt() })
+        fun ridge(base: Float, amp: Float, freq: Float, phase: Float, col: Int) {
+            val path = Path(); path.moveTo(dst.left, dst.bottom)
+            var xx = dst.left
+            while (xx <= dst.right + 4f) {
+                val t = (xx - dst.left) / dst.width()
+                val yy = dst.top + dst.height() * (base - amp * (sin(t * freq + phase) * 0.6f + sin(t * freq * 2.3f + phase * 1.7f) * 0.4f))
+                path.lineTo(xx, yy); xx += 6f
+            }
+            path.lineTo(dst.right, dst.bottom); path.close()
+            c.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = col })
+        }
+        ridge(0.70f, 0.10f, 5f, 0.4f, 0xCC6B4A7A.toInt())
+        ridge(0.80f, 0.08f, 7f, 2.1f, 0xE5402F55.toInt())
+        ridge(0.90f, 0.05f, 9f, 4.0f, 0xFF231A33.toInt())
+        c.restore()
+    }
+
+    /** Darkens the top and bottom so white text reads on any photo. */
+    private fun Ctx.shade(top: Float, bottomFrom: Float) {
+        if (top > 0f) c.drawRect(0f, 0f, px(W), px(top), Paint().apply { shader = LinearGradient(0f, 0f, 0f, px(top), 0x66000000, 0x00000000, Shader.TileMode.CLAMP) })
+        c.drawRect(0f, px(bottomFrom), px(W), px(H), Paint().apply { shader = LinearGradient(0f, px(bottomFrom), 0f, px(H), 0x00000000, 0xA6000000.toInt(), Shader.TileMode.CLAMP) })
+    }
+
+    private val WHITE = 0xFFFFFFFF.toInt()
+
+    private fun photoCountdown(x: Ctx) = with(x) {
+        photo(0f, 0f, W, H)
+        val dn = date()
+        shade(46f, H * 0.42f)
+        if (dn == null) { text("Add a date", pad, H - pad - 2f, 13f, uiFace(600), WHITE); return@with }
+        val (d, n) = dn
+        val name = d.name.ifBlank { "Your day" }
+        if (showLabel) text(ttl(name).uppercase(), pad, pad + 9f, 10.5f, labelFace(), a(0.85f, WHITE), 0.12f, L, W - 2 * pad - (if (conf.design == "photowide") 90f else 0f))
+        val wide = conf.design == "photowide"
+        val big = n.days.toString()
+        val sz = fit(big, if (wide) min(64f, H * 0.42f) else min(56f, H * 0.38f), W * 0.6f)
+        val base = H - pad - (if (wide) 2f else 18f)
+        val w = num(big, pad, base, sz, WHITE)
+        text(if (n.days == 1) "day" else "days", pad + w + 6f, base - 3f, 15f, uiFace(500), a(0.9f, WHITE))
+        if (wide) {
+            // a frosted date pill, top right
+            val ds = Fmt.short(n.d)
+            val tw = measure(ds, 12f, uiFace(600)) + 20f
+            rrect(W - pad - tw, pad - 3f, tw, 24f, 12f, fill(0x40FFFFFF))
+            text(ds, W - pad - tw / 2, pad + 13f, 12f, uiFace(600), WHITE, 0f, C)
+        } else text(Fmt.short(n.d), pad, H - pad - 1f, 11.5f, uiFace(500), a(0.8f, WHITE))
+    }
+
+    private fun photoDate(x: Ctx) = with(x) {
+        photo(0f, 0f, W, H)
+        shade(46f, H * 0.45f)
+        val t = LocalDate.now()
+        if (showLabel) text(ttl(t.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())).uppercase(), pad, pad + 9f, 10.5f, labelFace(), a(0.85f, WHITE), 0.12f, L, W - 2 * pad)
+        val sz = min(60f, H * 0.4f)
+        num(t.dayOfMonth.toString(), pad, H - pad - 18f, sz, WHITE)
+        text(t.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + t.year, pad, H - pad - 1f, 12f, uiFace(500), a(0.85f, WHITE), maxW = W - 2 * pad)
+    }
+
+    private fun polaroid(x: Ctx) = with(x) {
+        c.drawColor(0, PorterDuff.Mode.CLEAR)
+        val n = D.notes.firstOrNull { it.id == conf.ref } ?: D.notes.firstOrNull()
+        val text = n?.text?.trim().orEmpty().ifEmpty { "A note to self" }
+        val cw = W * 0.80f; val ch = H * 0.90f
+        c.save()
+        c.rotate(-3.5f, px(W / 2), px(H / 2))
+        val left = (W - cw) / 2; val top = (H - ch) / 2
+        val card = android.graphics.RectF(px(left), px(top), px(left + cw), px(top + ch))
+        c.drawRoundRect(card, px(2.5f), px(2.5f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFBFAF5.toInt(); setShadowLayer(px(5f), 0f, px(2.5f), 0x55000000)
+        })
+        val inset = cw * 0.065f
+        val ph = ch - inset - 36f
+        photo(left + inset, top + inset, cw - 2 * inset, ph)
+        para(text, left + inset, top + inset + ph + 6f, cw - 2 * inset, 13.5f, WFonts.serifItalic(), 0xFF2B2A26.toInt(), 0f, 1.0f, 2)
+        // a strip of tape
+        c.rotate(6f, px(W / 2), px(top))
+        rrect(W / 2 - 18f, top - 7f, 36f, 13f, 1.5f, fill(0x99F3E7C8.toInt()))
+        c.restore()
     }
 }

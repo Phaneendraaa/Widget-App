@@ -54,6 +54,10 @@ object WFonts {
         val a = assets ?: return@getOrPut Typeface.DEFAULT
         try { Typeface.Builder(a, "fonts/$file").setFontVariationSettings("'wght' $w").build() } catch (e: Exception) { Typeface.DEFAULT }
     }
+    fun serifItalic(): Typeface = cache.getOrPut("serifI") {
+        val a = assets ?: return@getOrPut Typeface.SERIF
+        try { Typeface.createFromAsset(a, "fonts/InstrumentSerif-Italic.ttf") } catch (e: Exception) { Typeface.SERIF }
+    }
     fun serif(): Typeface = cache.getOrPut("serif") {
         val a = assets ?: return@getOrPut Typeface.SERIF
         try { Typeface.createFromAsset(a, "fonts/InstrumentSerif.ttf") } catch (e: Exception) { Typeface.SERIF }
@@ -310,9 +314,11 @@ private fun draw(conf0: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
     val clip = Path().apply { addRoundRect(RectF(0f, 0f, wPx.toFloat(), hPx.toFloat()), r * density, r * density, Path.Direction.CW) }
     c.save()
     c.clipPath(clip)
-    if (pal.bg != 0) c.drawColor(pal.bg)
-    if (theme != null) Themes.under(c, theme, wPx.toFloat(), hPx.toFloat(), density)
-    if (conf.outline) {
+    val free = Signature.freeform(conf)
+    if (pal.bg != 0 && !free) c.drawColor(pal.bg)
+    if (theme != null && !free) Themes.under(c, theme, wPx.toFloat(), hPx.toFloat(), density)
+    if (free) {
+    } else if (conf.outline) {
         val s = ctx.stroke(argb(0.28f, pal.fg), 1.5f)
         c.drawRoundRect(RectF(0.75f * density, 0.75f * density, wPx - 0.75f * density, hPx - 0.75f * density), r * density, r * density, s)
     } else if (conf.style == "clear") {
@@ -320,7 +326,7 @@ private fun draw(conf0: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
         c.drawRoundRect(RectF(0.5f * density, 0.5f * density, wPx - 0.5f * density, hPx - 0.5f * density), r * density, r * density, s)
     }
     try { Designs.draw(ctx) } catch (e: Exception) { ctx.small("Couldn't draw this widget", 16f, 30f) }
-    if (theme != null) Themes.over(c, theme, wPx.toFloat(), hPx.toFloat(), density, r * density, pal.fg, pal.acc)
+    if (theme != null && !free) Themes.over(c, theme, wPx.toFloat(), hPx.toFloat(), density, r * density, pal.fg, pal.acc)
     if (!AppStore.previewing && AppStore.undoShownOn(conf.id)) ctx.undoButton()
     c.restore()
     return Rendered(bmp, ctx.hits)

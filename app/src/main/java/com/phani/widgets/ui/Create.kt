@@ -132,12 +132,14 @@ object Create {
 
     fun close() {
         // a new widget left without saving leaves nothing behind
+        conf?.photo?.let { ph -> if (AppStore.data.placed.none { it.photo == ph }) com.phani.widgets.widget.Photos.delete(ph) }
         val r = madeRef
         if (r != null && AppStore.data.placed.none { it.ref == r }) AppStore.change { dates.removeAll { it.id == r }; habits.removeAll { it.id == r }; counters.removeAll { it.id == r }; goals.removeAll { it.id == r }; notes.removeAll { it.id == r } }
         madeRef = null; open = false; conf = null; bindId = -1; adding = false
     }
 
     fun delete(c: WConf) {
+        c.photo?.let { ph -> if (AppStore.data.placed.count { it.photo == ph } <= 1) com.phani.widgets.widget.Photos.delete(ph) }
         AppStore.change(true) {
             placed.removeAll { it.id == c.id }
             val r = c.ref
@@ -336,7 +338,7 @@ private fun infoQuestion(c: WConf) = when (c.type) {
     "fast" -> "Your fasting goal"
     "pace" -> "What's your goal?"
     "year" -> "Nothing to fill in"
-    "today" -> "Nothing to fill in"
+    "today" -> if (c.design == "photo") "Pick a photo" else "Nothing to fill in"
     "moon" -> "Nothing to fill in"
     "note" -> "What should it say?"
     "next" -> "Your weekly schedule"
@@ -366,6 +368,7 @@ private fun infoSub(c: WConf): String? = when (c.type) {
 private fun InfoFields(c: WConf) {
     AppStore.rev
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (c.design in setOf("photo", "photowide", "polaroid")) PhotoField(c)
         StatsCard(c)
         when (c.type) {
             "countdown" -> CountdownInfo(c)
