@@ -168,11 +168,37 @@ object Widgets {
         return w to h
     }
 
+    /**
+     * The exact sizes the home screen shows this widget at (Android 12+ reports them, one per orientation).
+     * Drawing at each exact size keeps circles round and squares square; the min/max guess can be the wrong shape.
+     */
+    private fun exactSizes(m: AppWidgetManager, id: Int): List<Pair<Float, Float>> {
+        if (android.os.Build.VERSION.SDK_INT < 31) return emptyList()
+        val o = m.getAppWidgetOptions(id)
+        @Suppress("DEPRECATION")
+        val l: List<android.util.SizeF> = (if (android.os.Build.VERSION.SDK_INT >= 33) o.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, android.util.SizeF::class.java)
+            else o.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES)) ?: return emptyList()
+        return l.filter { it.width > 20f && it.height > 20f }.map { it.width to it.height }
+            .distinctBy { (it.first.toInt() / 4) to (it.second.toInt() / 4) }.take(3)
+    }
+
     fun render(ctx: Context, m: AppWidgetManager, id: Int, size: String) {
         val conf = confFor(id, size)
-        val rv = RemoteViews(ctx.packageName, R.layout.widget_host)
         val density = ctx.resources.displayMetrics.density
-        val (wDp, hDp) = sizeDp(m, id, size)
+        val exact = exactSizes(m, id)
+        if (exact.isNotEmpty() && android.os.Build.VERSION.SDK_INT >= 31) {
+            // one drawing per real size; the launcher shows the one that matches, so nothing is stretched
+            val map = exact.withIndex().associate { (n, wh) -> android.util.SizeF(wh.first, wh.second) to views(ctx, conf, id, size, wh.first, wh.second, density, n) }
+            m.updateAppWidget(id, RemoteViews(map))
+        } else {
+            val (wDp, hDp) = sizeDp(m, id, size)
+            m.updateAppWidget(id, views(ctx, conf, id, size, wDp, hDp, density, 0))
+        }
+    }
+
+    /** [slot] keeps each size's tap targets separate, so a tap acts on what's drawn at that size. */
+    private fun views(ctx: Context, conf: WConf?, id: Int, size: String, wDp: Float, hDp: Float, density: Float, slot: Int): RemoteViews {
+        val rv = RemoteViews(ctx.packageName, R.layout.widget_host)
         if (conf == null) {
             // Not set up yet: show a quiet placeholder that opens the picker.
             val ph = WConf("setup", "now", "card", size, "paper")
@@ -180,10 +206,9 @@ object Widgets {
             rv.setImageViewBitmap(R.id.img, r)
             val cfg = Intent(ctx, WidgetConfigActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            val pi = PendingIntent.getActivity(ctx, id * 100, cfg, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val pi = PendingIntent.getActivity(ctx, id * 1000 + slot * 100 + 99, cfg, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             CELLS.forEach { rv.setOnClickPendingIntent(it, pi) }
-            m.updateAppWidget(id, rv)
-            return
+            return rv
         }
         val k = density * widgetScale(size, wDp)
         val r = renderWidget(conf.copy(size = size), (wDp * density).toInt(), (hDp * density).toInt(), k)
@@ -211,22 +236,22 @@ object Widgets {
             val qk = when (act) { "quick" -> quick; "spend-open" -> "spend"; "fast" -> "fast"; else -> null }
             val pi = if (qk != null) {
                 // a deliberate change (any amount, start earlier, confirm end) happens in the quick panel
-                PendingIntent.getActivity(ctx, id * 100 + i, com.phani.widgets.QuickActivity.intent(ctx, qk, conf.ref, conf.id),
+                PendingIntent.getActivity(ctx, id * 1000 + slot * 100 + i, com.phani.widgets.QuickActivity.intent(ctx, qk, conf.ref, conf.id),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             } else if (act == "open") {
                 val open = Intent(ctx, MainActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    .setData(android.net.Uri.parse("widget://$id/$i")) // keeps each cell's intent distinct
+                    .setData(android.net.Uri.parse("widget://$id/$slot/$i")) // keeps each cell's intent distinct
                     .putExtra("open", act).putExtra("cid", conf.id)
-                PendingIntent.getActivity(ctx, id * 100 + i, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                PendingIntent.getActivity(ctx, id * 1000 + slot * 100 + i, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             } else {
                 val intent = Intent(ctx, providerFor(size)).setAction(ACT_TAP)
                     .putExtra("act", act).putExtra("id", h?.id).putExtra("value", h?.value).putExtra("cid", conf.id)
-                PendingIntent.getBroadcast(ctx, id * 100 + i, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                PendingIntent.getBroadcast(ctx, id * 1000 + slot * 100 + i, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             }
             rv.setOnClickPendingIntent(CELLS[i], pi)
         }
-        m.updateAppWidget(id, rv)
+        return rv
     }
 
     private fun renderPlaceholder(conf: WConf, w: Int, h: Int, density: Float): android.graphics.Bitmap {
