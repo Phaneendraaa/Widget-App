@@ -2,6 +2,7 @@ package com.phani.widgets.core
 
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.math.roundToInt
 import java.time.LocalDate
 import java.util.UUID
 
@@ -90,7 +91,7 @@ class AppData(
     /** The app-wide widget style: every widget whose theme is "app" draws in it. */
     var look: String = "paper",
     /** Zoom for the app's three tabs (1 = normal size). Starts zoomed out so more fits at a glance. */
-    var zoom: Float = 0.6f,
+    var zoom: Float = 0.8f,
 )
 
 /* ---------------- JSON ---------------- */
@@ -147,7 +148,7 @@ fun AppData.toJson(): JSONObject {
     o.put("howSeen", howSeen)
     o.put("bPeriod", bPeriod).put("bStart", bStart ?: JSONObject.NULL).put("bEnd", bEnd ?: JSONObject.NULL).put("weekStart", weekStart).put("bFlex", bFlex)
         .put("remHabit", remHabit).put("remHabitAt", remHabitAt).put("remSubs", remSubs).put("remFast", remFast).put("remWater", remWater)
-        .put("look", look).put("uiZoom", zoom.toDouble())
+        .put("look", look).put("zoomPct", (zoom * 100).roundToInt())
     o.put("notes", JSONArray(notes.map { JSONObject().put("id", it.id).put("text", it.text) }))
     return o
 }
@@ -194,7 +195,7 @@ fun appDataFrom(o: JSONObject): AppData {
         weekStart = o.optInt("weekStart", 1), bFlex = o.optBoolean("bFlex", true),
         remHabit = o.optBoolean("remHabit", false), remHabitAt = o.optString("remHabitAt", "21:00"), remSubs = o.optBoolean("remSubs", false),
         remFast = o.optBoolean("remFast", false), remWater = o.optBoolean("remWater", false),
-        look = o.optString("look", "paper"), zoom = o.optDouble("uiZoom", 0.6).toFloat().coerceIn(0.5f, 1.4f),
+        look = o.optString("look", "paper"), zoom = (o.optInt("zoomPct", 80) / 100f).coerceIn(0.5f, 1.4f),
         notes = (o.optJSONArray("notes") ?: JSONArray()).objs().map { Note(it.getString("id"), it.getString("text")) }.toMutableList(),
     )
 }
