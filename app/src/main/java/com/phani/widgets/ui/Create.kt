@@ -101,9 +101,31 @@ object Create {
         bindId = -1; conf = c; editing = true; madeRef = null; open = true; adding = add
     }
 
+    /** Point this widget at something the user already has, and drop the blank one made for it. */
+    fun useExisting(id: String) {
+        val c = conf ?: return
+        val blank = madeRef
+        conf = c.copy(ref = id)
+        if (blank != null && blank != id && AppStore.data.placed.none { it.ref == blank })
+            AppStore.change { dates.removeAll { it.id == blank }; habits.removeAll { it.id == blank }; counters.removeAll { it.id == blank }; goals.removeAll { it.id == blank }; notes.removeAll { it.id == blank } }
+        madeRef = null
+    }
+
+    /** A saved widget showing exactly the same thing in the same layout and theme. */
+    fun duplicateOf(c: WConf): WConf? = AppStore.data.placed.firstOrNull {
+        it.id != c.id && it.type == c.type && it.design == c.design && (it.theme ?: "paper") == (c.theme ?: "paper") && it.ref == c.ref && it.opt == c.opt
+    }
+
     /** Save the widget to My widgets (new or changed). */
     fun commit() {
-        val c = conf ?: return
+        var c = conf ?: return
+        val dup = if (AppStore.data.placed.none { it.id == c.id }) duplicateOf(c) else null
+        if (dup != null) {
+            // already saved: use that one instead of making a copy
+            close(); conf = dup; editing = true; open = true
+            Toaster.show("You already have this widget, so we used that one")
+            return
+        }
         AppStore.change { val i = placed.indexOfFirst { it.id == c.id }; if (i >= 0) placed[i] = c else placed.add(0, c) }
         madeRef = null; editing = true
     }
@@ -374,6 +396,46 @@ private fun hint(c: WConf) = when (c.type) {
 
 private fun num(s: String): Double? = s.replace(",", ".").trim().toDoubleOrNull()
 
+/** The things of this kind the user already has (other than the one being edited). */
+private fun existing(c: WConf): List<Pair<String, String>> {
+    val d = AppStore.data
+    val l = when (c.type) {
+        "countdown" -> d.dates.map { it.id to it.name }
+        "streak" -> d.habits.map { it.id to it.name }
+        "counter" -> d.counters.map { it.id to it.name }
+        "pace" -> d.goals.map { it.id to it.name }
+        "note" -> d.notes.map { it.id to it.text.lineSequence().first().take(24) }
+        else -> emptyList()
+    }
+    return l.filter { it.first != c.ref && it.second.isNotBlank() }
+}
+
+/** "Use one you already have": avoids making a second Water counter or a second Mom's birthday. */
+@Composable
+internal fun UseExisting(c: WConf) {
+    val l = existing(c)
+    if (l.isEmpty() || Create.editing) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FieldLabel("Use one you already have")
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            l.forEach { (id, name) -> Chip(name, false) { Create.useExisting(id) } }
+        }
+        Text("Or make a new one below.", style = T.small, color = pal().muted)
+    }
+}
+
+/** Shown when a new name matches one the user already has. */
+@Composable
+internal fun SameName(c: WConf, name: String) {
+    val p = pal()
+    val hit = existing(c).firstOrNull { it.second.trim().equals(name.trim(), ignoreCase = true) } ?: return
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("You already have \u201c${hit.second}\u201d. Use it so the numbers stay in one place?", style = T.small, color = p.ink, modifier = Modifier.weight(1f))
+        Spacer(Modifier.width(8.dp))
+        Chip("Use it", true) { Create.useExisting(hit.first) }
+    }
+}
+
 @Composable
 private fun CountdownInfo(c: WConf) {
     AppStore.rev
@@ -382,7 +444,9 @@ private fun CountdownInfo(c: WConf) {
     }
     val x = AppStore.data.dates.firstOrNull { it.id == c.ref } ?: return
     var name by remember(x.id) { mutableStateOf(x.name) }
+    UseExisting(c)
     Field("Name", name, { name = it; AppStore.change { x.name = it.take(40) } }, "My birthday")
+    SameName(c, name)
     DateField("Date", x.date) { v -> AppStore.change { x.date = v } }
     ToggleRow("Repeats every year", x.yearly, "For birthdays and holidays") { AppStore.change { x.yearly = !x.yearly } }
 }
@@ -392,7 +456,9 @@ private fun StreakInfo(c: WConf) {
     AppStore.rev
     val h = AppStore.data.habits.firstOrNull { it.id == c.ref } ?: return
     var name by remember(h.id) { mutableStateOf(h.name) }
+    UseExisting(c)
     Field("Habit", name, { name = it; AppStore.change { h.name = it.take(30) } }, "Run")
+    SameName(c, name)
     HabitCalendar(h)
     RemindToggle("habit", "Remind me if I forget", "A nudge if you haven't checked in")
 }
@@ -404,7 +470,9 @@ private fun CounterInfo(c: WConf) {
     var name by remember(ct.id) { mutableStateOf(ct.name) }
     var goal by remember(ct.id) { mutableStateOf(ct.goal.toString()) }
     var unit by remember(ct.id) { mutableStateOf(ct.unit) }
+    UseExisting(c)
     Field("Name", name, { name = it; AppStore.change { ct.name = it.take(30) } }, "Water")
+    SameName(c, name)
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Field("Daily goal", goal, { goal = it; it.toIntOrNull()?.let { g -> AppStore.change { ct.goal = g.coerceIn(1, 999) } } }, "8", KeyboardType.Number, Modifier.weight(1f))
         Field("Counted in", unit, { unit = it; AppStore.change { ct.unit = it.ifBlank { "times" }.take(14) } }, "glasses", modifier = Modifier.weight(1f))
@@ -482,6 +550,7 @@ private fun SubsInfo() {
         BigButton("Add ${name.ifBlank { "subscription" }}", kind = if (ready) "solid" else "ghost") {
             val a = num(amt) ?: run { Toaster.show("Add a price"); return@BigButton }
             if (name.isBlank()) { Toaster.show("Add a name"); return@BigButton }
+            if (d.subs.any { it.name.trim().equals(name.trim(), ignoreCase = true) }) { Toaster.show("${name.trim()} is already on your list"); return@BigButton }
             AppStore.change { subs.add(Sub(uid(), name.trim(), a, cycle, next)) }
             name = ""; amt = ""
         }

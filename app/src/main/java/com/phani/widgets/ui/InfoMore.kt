@@ -66,7 +66,9 @@ internal fun PaceInfo(c: com.phani.widgets.core.WConf) {
     var unit by remember(g.id) { mutableStateOf(g.unit) }
     var done by remember(g.id) { mutableStateOf(Fmt.trimNum(g.done)) }
     var step by remember(g.id) { mutableStateOf(Fmt.trimNum(g.step)) }
+    UseExisting(c)
     Field("Goal", name, { name = it; AppStore.change { g.name = it.take(30) } }, "Read 24 books")
+    SameName(c, name)
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Field("Target", target, { target = it; num2(it)?.let { v -> AppStore.change { g.target = maxOf(1.0, v) } } }, "24", KeyboardType.Decimal, Modifier.weight(1f))
         Field("Counted in", unit, { unit = it; AppStore.change { g.unit = it.ifBlank { "units" }.take(14) } }, "books", modifier = Modifier.weight(1f))
@@ -83,6 +85,7 @@ internal fun NoteInfo(c: com.phani.widgets.core.WConf) {
     AppStore.rev
     val p = pal()
     val n = AppStore.data.notes.firstOrNull { it.id == c.ref } ?: return
+    UseExisting(c)
     var text by remember(n.id) { mutableStateOf(n.text) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FieldLabel("Note")
@@ -135,7 +138,11 @@ internal fun SchedInfo() {
             if (title.isBlank()) { Toaster.show("Say what it is first"); return@BigButton }
             if (mins(e) <= mins(s)) { Toaster.show("The end time must be after the start"); return@BigButton }
             val days = when (every) { "week" -> listOf(1, 2, 3, 4, 5); "all" -> (0..6).toList(); else -> listOf(day) }
-            AppStore.change { days.forEach { d -> sched.getOrPut(d) { mutableListOf() }.add(SchedItem(s, e, title.trim(), place.trim(), null)) } }
+            AppStore.change { days.forEach { d ->
+                val l = sched.getOrPut(d) { mutableListOf() }
+                // the same thing at the same time isn't added twice
+                if (l.none { it.s == s && it.title.equals(title.trim(), ignoreCase = true) }) l.add(SchedItem(s, e, title.trim(), place.trim(), null))
+            } }
             title = ""; place = ""
         }
     }
@@ -179,6 +186,7 @@ internal fun ClassesInfo() {
             if (name.isBlank()) { Toaster.show("Name the class first"); return@BigButton }
             val tt = maxOf(0, t.toIntOrNull() ?: 0); val aa = (a.toIntOrNull() ?: 0).coerceIn(0, tt)
             val short = name.trim().split(" ").filter { it.isNotBlank() }.let { w -> if (w.size > 1) w.take(3).joinToString("") { it.take(1).uppercase() } else name.trim().take(3).uppercase() }
+            if (AppStore.data.subjects.any { it.name.equals(name.trim(), ignoreCase = true) }) { Toaster.show("${name.trim()} is already in your classes"); return@BigButton }
             AppStore.change { subjects.add(Subject(uid(), name.trim(), short, aa, tt)) }
             name = ""; a = ""; t = ""
         }

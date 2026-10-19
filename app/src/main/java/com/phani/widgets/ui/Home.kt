@@ -304,10 +304,14 @@ private fun Packs() {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         PACKS.forEach { pk ->
             Column(Modifier.width(168.dp).clip(RoundedCornerShape(20.dp)).background(p.card).clickable {
-                var made = emptyList<WConf>()
-                AppStore.change(true) { made = pk.make(this); placed.addAll(0, made) }
+                var added = 0
+                AppStore.change(true) {
+                    val made = pk.make(this).map { w -> dedupeRef(this, w) }
+                    val fresh = made.filter { w -> placed.none { it.type == w.type && it.design == w.design && it.ref == w.ref } }
+                    placed.addAll(0, fresh); added = fresh.size
+                }
                 Nav.screen = "mine"
-                Toaster.show("${pk.name}: ${made.size} widgets added. Tap one to fill it in, then Add.", true)
+                Toaster.show(if (added == 0) "You already have the ${pk.name} widgets" else "${pk.name}: $added widgets added. Tap one to fill it in, then Add.", added > 0)
             }.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(pk.name, style = T.bodyB.copy(fontSize = 16.sp), color = p.ink)
                 Text(pk.what, style = T.small, color = p.muted, maxLines = 2, minLines = 2)
@@ -319,5 +323,25 @@ private fun Packs() {
                 }
             }
         }
+    }
+}
+
+
+/** If a pack just made something the user already had by that name, point at theirs and drop the copy. */
+private fun dedupeRef(d: com.phani.widgets.core.AppData, w: WConf): WConf {
+    val r = w.ref ?: return w
+    fun <T> pick(l: MutableList<T>, id: (T) -> String, name: (T) -> String): WConf {
+        val mine = l.firstOrNull { id(it) == r } ?: return w
+        val old = l.firstOrNull { id(it) != r && name(it).equals(name(mine), ignoreCase = true) } ?: return w
+        l.remove(mine)
+        return w.copy(ref = id(old))
+    }
+    return when (w.type) {
+        "streak" -> pick(d.habits, { it.id }, { it.name })
+        "counter" -> pick(d.counters, { it.id }, { it.name })
+        "countdown" -> pick(d.dates, { it.id }, { it.name })
+        "pace" -> pick(d.goals, { it.id }, { it.name })
+        "note" -> pick(d.notes, { it.id }, { it.text })
+        else -> w
     }
 }
