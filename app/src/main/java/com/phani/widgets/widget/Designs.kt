@@ -502,7 +502,7 @@ object Designs {
                 val base = pad + 22f + cap(26f) + 6f
                 val gtop = base + 14f
                 val avH = H - pad - gtop; val avW = W - 2 * pad
-                val bands = ((avH + bandGap) / (rows * 13f + (rows - 1) * gap + bandGap)).toInt().coerceIn(1, 3)
+                val bands = ((avH + bandGap) / (rows * 11f + (rows - 1) * gap + bandGap)).toInt().coerceIn(1, 3)
                 val cellH = min(maxCell, (avH - (bands - 1) * bandGap - bands * (rows - 1) * gap) / (rows * bands))
                 val cols = ((avW + gap) / (cellH + gap)).toInt().coerceIn(8, 30)
                 val cell = min(cellH, (avW - gap * (cols - 1)) / cols)

@@ -296,6 +296,21 @@ fun preferredHeight(conf: WConf, widthDp: Float): Float = when (conf.size) {
     }
 }
 
+/** Designs laid out as a block of rows: centred when the home screen gives them more height than they were made for. */
+private val BANDED = setOf("subs/list", "countdown/stack", "year/bars", "year/dots", "clock/analog", "clock/list", "next/today",
+    "attendance/bars", "note/card", "today/month", "spend/receipt", "now/card")
+
+/** The height (dp) to lay a design out in when its space is taller than it needs; null to use the full height. */
+private fun bandHeight(conf: WConf, H: Float): Float? {
+    if (Catalog.design(conf.type, conf.design).sig) return null // signature designs shape themselves to the space
+    val want = when (conf.size) {
+        "w" -> 84f
+        "m" -> if ("${conf.type}/${conf.design}" in BANDED) preferredHeight(conf, 330f) else return null
+        else -> return null
+    }
+    return if (H > want * 1.12f) want else null
+}
+
 /** Render a widget to a bitmap with its tap areas. Width/height in pixels. */
 fun renderWidget(conf: WConf, wPx: Int, hPx: Int, density: Float, sample: Boolean = false): Rendered {
     if (!sample) return draw(conf, wPx, hPx, density)
@@ -328,7 +343,18 @@ private fun draw(conf00: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
         val s = ctx.stroke((0x38 shl 24) or (wfg and 0xFFFFFF), 1f)
         c.drawRoundRect(RectF(0.5f * density, 0.5f * density, wPx - 0.5f * density, hPx - 0.5f * density), r * density, r * density, s)
     }
-    try { Designs.draw(ctx) } catch (e: Exception) { ctx.small("Couldn't draw this widget", 16f, 30f) }
+    try {
+        val band = bandHeight(conf, ctx.H)
+        if (band == null) Designs.draw(ctx) else {
+            // a fixed block (a strip, a list) sits in the middle of a taller space instead of hugging the top
+            val dy = (ctx.H - band) / 2f * density
+            c.save(); c.translate(0f, dy)
+            val sub = Ctx(c, wPx.toFloat(), band * density, density, pal, conf)
+            Designs.draw(sub)
+            c.restore()
+            sub.hits.forEach { h -> ctx.hits.add(Hit(RectF(h.rect).apply { offset(0f, dy) }, h.act, h.id, h.value)) }
+        }
+    } catch (e: Exception) { ctx.small("Couldn't draw this widget", 16f, 30f) }
     if (theme != null && !free) Themes.over(c, theme, wPx.toFloat(), hPx.toFloat(), density, r * density, pal.fg, pal.acc)
     if (!AppStore.previewing && AppStore.undoShownOn(conf.id)) ctx.undoButton()
     c.restore()
