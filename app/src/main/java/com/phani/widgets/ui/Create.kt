@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -303,7 +304,7 @@ fun Thumb(c: WConf, boxW: Float, boxH: Float, sample: Boolean = false, onTap: ((
     val bh = preferredHeight(c, bw)
     val k = minOf((boxW - 8f) / bw, (boxH - 8f) / bh)
     Box(Modifier.size(boxW.dp, boxH.dp), contentAlignment = Alignment.Center) {
-        WidgetView(c, Modifier.requiredWidth(bw.dp).graphicsLayer(scaleX = k, scaleY = k), live = false, sample = sample, onTap = onTap)
+        WidgetView(c, Modifier.requiredSize(bw.dp, bh.dp).graphicsLayer(scaleX = k, scaleY = k), live = false, sample = sample, onTap = onTap)
     }
 }
 

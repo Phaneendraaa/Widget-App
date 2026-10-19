@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -278,7 +279,7 @@ private fun Zoomed(c: WConf, zoom: Float, maxH: Float? = null, onTap: () -> Unit
         val nh = com.phani.widgets.widget.preferredHeight(c, nw)
         val k = minOf(zoom, maxWidth.value / nw, maxH?.let { it / nh } ?: zoom)
         Box(Modifier.size((nw * k).dp, (nh * k).dp), contentAlignment = Alignment.Center) {
-            WidgetView(c, Modifier.requiredWidth(nw.dp).graphicsLayer(scaleX = k, scaleY = k), live = false, sample = true, onTap = onTap)
+            WidgetView(c, Modifier.requiredSize(nw.dp, nh.dp).graphicsLayer(scaleX = k, scaleY = k), live = false, sample = true, onTap = onTap)
         }
     }
 }
