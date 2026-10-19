@@ -303,7 +303,9 @@ fun renderWidget(conf: WConf, wPx: Int, hPx: Int, density: Float, sample: Boolea
     try { return draw(conf.copy(ref = Catalog.defaultRefIn(conf.type, AppStore.sample)), wPx, hPx, density) } finally { AppStore.previewing = false }
 }
 
-private fun draw(conf0: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
+private fun draw(conf00: WConf, wPx: Int, hPx: Int, density: Float): Rendered {
+    // Signature designs are objects (a card, a ticket, a calendar page); with no background they'd fall apart, so they get frosted glass
+    val conf0 = if (Themes.idOf(conf00.theme) == "clear" && Catalog.design(conf00.type, conf00.design).sig) conf00.copy(theme = "glass") else conf00
     val theme = Themes.get(conf0.theme)
     val conf = Themes.resolve(conf0)
     val (wbg, wfg) = wallColors()

@@ -387,7 +387,6 @@ private fun InfoFields(c: WConf) {
     AppStore.rev
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (c.design in setOf("photo", "photowide", "polaroid")) PhotoField(c)
-        StatsCard(c)
         when (c.type) {
             "countdown" -> CountdownInfo(c)
             "streak" -> StreakInfo(c)
@@ -401,6 +400,8 @@ private fun InfoFields(c: WConf) {
             "next" -> SchedInfo()
             "attendance" -> ClassesInfo()
         }
+        // how it's going, once the widget is saved (a new one has nothing to show yet)
+        if (AppStore.data.placed.any { it.id == c.id }) StatsCard(c)
     }
 }
 

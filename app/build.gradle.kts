@@ -12,8 +12,8 @@ android {
         applicationId = "com.phani.widgets"
         minSdk = 26
         targetSdk = 35
-        versionCode = 35
-        versionName = "3.3.0"
+        versionCode = 36
+        versionName = "3.4.0"
     }
 
     // Fixed key so every build is signed the same and updates install over each other.
