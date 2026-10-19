@@ -24,6 +24,8 @@ import com.phani.widgets.core.CUR
 import com.phani.widgets.core.Catalog
 import com.phani.widgets.core.spendState
 import com.phani.widgets.core.spendView
+import com.phani.widgets.core.subsMonthly
+import com.phani.widgets.core.subsSorted
 import android.graphics.RectF
 import android.text.TextPaint
 import java.time.LocalDate
@@ -72,6 +74,7 @@ object Signature {
             "fast/arc" -> sunArc(x)
             "pace/climb" -> summit(x)
             "spend/metal" -> metal(x)
+            "subs/tiles" -> tiles(x)
             else -> return false
         }
         return true
@@ -699,6 +702,10 @@ object Signature {
                 intArrayOf(0, a(if (dark) 0.09f else 0.32f, WHITE), 0, a(if (dark) 0.05f else 0.16f, WHITE), 0),
                 floatArrayOf(0f, 0.32f, 0.52f, 0.78f, 1f), Shader.TileMode.CLAMP)
         })
+        // light cards get a cool titanium tint so they read as metal, not paper
+        if (!dark) c.drawRect(0f, 0f, px(W), px(H), Paint().apply {
+            shader = LinearGradient(0f, 0f, px(W * 0.3f), px(H), a(0.03f, 0xFF7D838C.toInt()), a(0.13f, 0xFF7D838C.toInt()), Shader.TileMode.CLAMP)
+        })
     }
 
     /** A gold contact chip. */
@@ -772,5 +779,61 @@ object Signature {
         chip(m, ab - cap(sz) / 2 - chipH / 2, chipW, chipH)
         emboss(big, ax, ab, sz, if (over) p.acc else p.fg, dark)
         small((if (over) "over, " else "left ") + v.of, ax, ab + 17f, maxW = W - ax - m)
+    }
+
+    /* ---------- Renewal tiles ---------- */
+
+    private fun initials(n: String): String {
+        val w = n.split(Regex("[\\s+&·._-]+")).filter { it.isNotBlank() }
+        return when {
+            w.isEmpty() -> "?"
+            w.size == 1 -> w[0].first().uppercase()
+            else -> (w[0].first().toString() + w[1].first()).uppercase()
+        }
+    }
+
+    private fun tiles(x: Ctx) = with(x) {
+        val l = subsSorted()
+        if (l.isEmpty()) { nothing("Add a subscription"); return@with }
+        val more = l.size > 4
+        label(ttl("Renewals"), pad, pad + 11.5f, W * 0.5f)
+        small(Fmt.money(subsMonthly(), 0) + " a month" + (if (more) " · ${l.size} plans" else ""), W - pad, pad + 11.5f, size = 11.5f, align = R, maxW = W * 0.5f - pad)
+        val cols = 4
+        val colW = (W - 2 * pad) / cols
+        val top = pad + 22f
+        val ts = min(colW - 10f, H - top - pad - 38f).coerceAtLeast(30f)
+        val block = ts + 36f
+        val ty = top + (H - pad - top - block) / 2
+        val mono = if (conf.font == "grotesk") WFonts.serif() else numFace()
+        l.take(cols).forEachIndexed { i, r ->
+            val cx = pad + colW * i + colW / 2
+            val rect = RectF(px(cx - ts / 2), px(ty), px(cx + ts / 2), px(ty + ts))
+            val rad = px(ts * 0.27f)
+            val next = i == 0
+            val soon = r.days <= 3
+            c.drawRoundRect(rect, rad, rad, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = if (next) LinearGradient(0f, rect.top, 0f, rect.bottom, mix(p.acc, WHITE, 0.12f), mix(p.acc, 0xFF000000.toInt(), 0.14f), Shader.TileMode.CLAMP)
+                         else LinearGradient(0f, rect.top, 0f, rect.bottom, a(0.12f, p.fg), a(0.06f, p.fg), Shader.TileMode.CLAMP)
+            })
+            // a soft gloss on the top half, and a hairline edge
+            c.save(); c.clipRect(rect.left, rect.top, rect.right, rect.centerY())
+            c.drawRoundRect(rect, rad, rad, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = LinearGradient(0f, rect.top, 0f, rect.centerY(), a(if (next) 0.22f else 0.10f, WHITE), a(0f, WHITE), Shader.TileMode.CLAMP)
+            })
+            c.restore()
+            c.drawRoundRect(RectF(rect.left + px(0.5f), rect.top + px(0.5f), rect.right - px(0.5f), rect.bottom - px(0.5f)), rad, rad,
+                stroke(a(if (next) 0.18f else 0.10f, if (next) WHITE else p.fg), 1f))
+            val ini = initials(r.s.name)
+            val fs = ts * (if (ini.length == 1) 0.48f else 0.36f)
+            text(ini, cx, ty + ts / 2 + fs * 0.35f, fs, mono, if (next) p.accOnBtn else p.fg, if (ini.length == 1) 0f else 0.02f, C)
+            // due soon: a small dot on the corner
+            if (soon) {
+                circle(cx + ts / 2 - 3f, ty + 3f, 5.5f, fill(p.bg or 0xFF000000.toInt()))
+                circle(cx + ts / 2 - 3f, ty + 3f, 3.8f, fill(if (next) p.fg else p.acc))
+            }
+            t2(r.s.name, cx, ty + ts + 17f, 12f, p.fg, maxW = colW - 4f, align = C)
+            val due = when (r.days) { 0 -> "Today"; 1 -> "Tomorrow"; else -> "in ${r.days} days" }
+            small(due, cx, ty + ts + 32f, if (soon) p.acc else p.mut, 11f, C, maxW = colW - 4f, weight = if (soon) 600 else 400)
+        }
     }
 }
