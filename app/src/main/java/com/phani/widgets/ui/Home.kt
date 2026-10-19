@@ -94,6 +94,7 @@ fun GalleryScreen() {
     AppStore.rev
     val p = pal()
     TopTitle("Widgets")
+    StyleCard()
     val size = Gallery.size
     if (size != null) {
         Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).padding(horizontal = 16.dp, vertical = 12.dp),
@@ -158,12 +159,11 @@ fun GalleryScreen() {
 @Composable
 private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier) {
     val p = pal()
-    val (wbg, _) = wall()
-    val show = listOf("paper", "midnight", "modern", "retro", "paper", "neon", "pastel", "ink", "ocean", "newspaper", "terminal", "sunset")
-    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, theme = d.look ?: show[Math.floorMod((t.type + d.id).hashCode(), show.size)])
+    // every design is shown in the user's own style, so what they see is what they get
+    val conf = WConf("g${t.type}${d.id}", t.type, d.id, d.size, theme = com.phani.widgets.widget.Themes.APP)
     val open = { Create.startFrom(t.type, d.id, Gallery.bindId, conf.theme); Gallery.bindId = -1; Gallery.size = null }
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(p.card).clickable { open() }) {
-        Box(Modifier.fillMaxWidth().background(wbg).padding(10.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().background(themeBackdrop(AppStore.look)).padding(10.dp), contentAlignment = Alignment.Center) {
             Zoomed(conf, 0.78f) { open() }
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
@@ -220,9 +220,8 @@ private fun WidgetCard(c: WConf) {
     AppStore.rev
     val p = pal()
     val on = Widgets.isOnPhone(c.id)
-    val (wbg, _) = wall()
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).clickable { Create.startEdit(c) }) {
-        Box(Modifier.fillMaxWidth().background(wbg).padding(14.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().background(themeBackdrop(com.phani.widgets.widget.Themes.idOf(c.theme) ?: "paper")).padding(14.dp), contentAlignment = Alignment.Center) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
             WidgetView(c, Modifier.widthIn(max = if (c.size == "s") 160.dp else 330.dp), live = true, onTap = { Create.startEdit(c) }) { h ->
                 if (h.act == "spend-open" || h.act == "fast") ctx.startActivity(com.phani.widgets.QuickActivity.intent(ctx, if (h.act == "fast") "fast" else "spend", c.ref, c.id))

@@ -11,6 +11,8 @@ import java.util.Locale
 /** Single source of truth. Screens read [rev] so they recompose after every change. */
 object AppStore {
     lateinit var data: AppData
+    /** The app-wide widget style (safe to read before the data has loaded). */
+    val look: String get() = if (::data.isInitialized) data.look else "paper"
         private set
     var rev by mutableIntStateOf(0)
         private set

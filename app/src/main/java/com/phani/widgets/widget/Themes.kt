@@ -40,7 +40,13 @@ object Themes {
         WTheme("clear", "No background", "Just the text, on your wallpaper", "clear", accent = "signal"),
     )
 
-    fun get(id: String?): WTheme? = all.firstOrNull { it.id == id }
+    /** A widget with this theme follows the app-wide style, so one change restyles them all. */
+    const val APP = "app"
+
+    /** The theme a widget really uses: the app style when it follows it. */
+    fun idOf(id: String?): String? = if (id == APP) com.phani.widgets.core.AppStore.look else id
+
+    fun get(id: String?): WTheme? { val k = idOf(id); return all.firstOrNull { it.id == k } }
 
     /** The look a widget actually draws with: its theme's settings, or its own when it has no theme. */
     fun resolve(c: WConf): WConf {

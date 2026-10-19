@@ -87,6 +87,8 @@ class AppData(
     var remSubs: Boolean = false,
     var remFast: Boolean = false,
     var remWater: Boolean = false,
+    /** The app-wide widget style: every widget whose theme is "app" draws in it. */
+    var look: String = "paper",
 )
 
 /* ---------------- JSON ---------------- */
@@ -143,6 +145,7 @@ fun AppData.toJson(): JSONObject {
     o.put("howSeen", howSeen)
     o.put("bPeriod", bPeriod).put("bStart", bStart ?: JSONObject.NULL).put("bEnd", bEnd ?: JSONObject.NULL).put("weekStart", weekStart).put("bFlex", bFlex)
         .put("remHabit", remHabit).put("remHabitAt", remHabitAt).put("remSubs", remSubs).put("remFast", remFast).put("remWater", remWater)
+        .put("look", look)
     o.put("notes", JSONArray(notes.map { JSONObject().put("id", it.id).put("text", it.text) }))
     return o
 }
@@ -189,6 +192,7 @@ fun appDataFrom(o: JSONObject): AppData {
         weekStart = o.optInt("weekStart", 1), bFlex = o.optBoolean("bFlex", true),
         remHabit = o.optBoolean("remHabit", false), remHabitAt = o.optString("remHabitAt", "21:00"), remSubs = o.optBoolean("remSubs", false),
         remFast = o.optBoolean("remFast", false), remWater = o.optBoolean("remWater", false),
+        look = o.optString("look", "paper"),
         notes = (o.optJSONArray("notes") ?: JSONArray()).objs().map { Note(it.getString("id"), it.getString("text")) }.toMutableList(),
     )
 }

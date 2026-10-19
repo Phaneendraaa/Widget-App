@@ -93,7 +93,7 @@ object Create {
             else -> null
         }
         madeRef = ref
-        conf = WConf(uid(), type, d.id, d.size, ref = ref, theme = theme ?: "paper")
+        conf = WConf(uid(), type, d.id, d.size, ref = ref, theme = theme ?: com.phani.widgets.widget.Themes.APP)
         this.bindId = bindId; editing = false; adding = false; open = true
     }
 
@@ -113,7 +113,7 @@ object Create {
 
     /** A saved widget showing exactly the same thing in the same layout and theme. */
     fun duplicateOf(c: WConf): WConf? = AppStore.data.placed.firstOrNull {
-        it.id != c.id && it.type == c.type && it.design == c.design && (it.theme ?: "paper") == (c.theme ?: "paper") && it.ref == c.ref && it.opt == c.opt
+        it.id != c.id && it.type == c.type && it.design == c.design && com.phani.widgets.widget.Themes.idOf(it.theme ?: "paper") == com.phani.widgets.widget.Themes.idOf(c.theme ?: "paper") && it.ref == c.ref && it.opt == c.opt
     }
 
     /** Save the widget to My widgets (new or changed). */
@@ -194,7 +194,7 @@ fun CreateScreen() {
             SectionHead("2", "Size on your home screen", null)
             SizePicker(c)
             Spacer(Modifier.height(4.dp))
-            SectionHead("3", "Theme", "Pick a look. Each one is made to fit every widget.")
+            SectionHead("3", "Look", "It uses your style, so your home screen matches.")
             StyleSection(c)
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = Pad).padding(top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -601,7 +601,29 @@ private fun StyleSection(c: WConf) {
         DesignTab(c, set)
         Spacer(Modifier.height(4.dp))
     }
-    FieldLabel("Theme")
+    FieldLabel("Look")
+    val APP = com.phani.widgets.widget.Themes.APP
+    val follows = c.theme == APP
+    val style = StyleSheet.current()
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)
+        .then(if (follows) Modifier.border(2.dp, p.ink, RoundedCornerShape(18.dp)) else Modifier)
+        .clickable { set(c.copy(theme = APP, title = null, bg = null, fg = null, alpha = 100, radius = -1, outline = false)) }
+        .padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Swatch(style, 36.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Your style · ${style.name}", style = T.smallB, color = p.ink, maxLines = 1)
+            Text("Changes when you change your style", style = T.small.copy(fontSize = 12.sp), color = p.muted, maxLines = 1)
+        }
+        if (follows) Icon(Ic.check, null, tint = p.ink, modifier = Modifier.size(20.dp))
+    }
+    var more by remember(c.id) { mutableStateOf(!follows) }
+    if (!more) {
+        Text("Give this widget its own look", style = T.smallB, color = p.muted,
+            modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { more = true }.padding(vertical = 8.dp, horizontal = 4.dp))
+        return
+    }
+    FieldLabel("Its own look")
     val cur = c.theme ?: "paper"
     com.phani.widgets.widget.Themes.all.chunked(2).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
