@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         Widgets.prune(this)
+        com.phani.widgets.core.Live.refresh(this)
     }
 
     /** Opened from a home-screen widget or from the widget setup screen. */

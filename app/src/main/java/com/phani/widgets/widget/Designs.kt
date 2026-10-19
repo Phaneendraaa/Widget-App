@@ -45,6 +45,7 @@ object Designs {
 
     fun draw(x: Ctx) {
         if (Signature.draw(x)) return
+        if (LiveDesigns.draw(x)) return
         when (x.conf.type) {
             "now" -> now(x)
             "spend" -> spend(x)

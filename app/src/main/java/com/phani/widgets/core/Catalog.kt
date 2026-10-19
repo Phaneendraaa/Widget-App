@@ -50,6 +50,13 @@ object Catalog {
         TypeDef("moon", "Moon", "time", "Tonight's moon phase and when the next full moon is.",
             listOf(DesignDef("moon", "Moon", "s"), DesignDef("phase", "Phase", "w"),
                 DesignDef("night", "Night sky", "s", sig = true))),
+        TypeDef("weather", "Weather", "outside", "The weather in your city: now, the next hours and the week. Updates every half hour.",
+            listOf(DesignDef("sky", "Sky", "s", sig = true), DesignDef("skyhours", "Sky and hours", "m", sig = true),
+                DesignDef("now", "Now", "s"), DesignDef("hours", "Next hours", "w"), DesignDef("week", "Week", "m")), isNew = true),
+        TypeDef("aqi", "Air quality", "outside", "How clean the air is in your city right now, and what it means for going out.",
+            listOf(DesignDef("gauge", "Gauge", "s"), DesignDef("strip", "Scale", "w")), isNew = true),
+        TypeDef("rates", "Rates", "money", "Exchange rates, gold and crypto, updated through the day.",
+            listOf(DesignDef("list", "List", "m"), DesignDef("ticker", "Ticker", "w"), DesignDef("one", "One rate", "s")), isNew = true),
     )
     val cats = listOf("all" to "All", "smart" to "Smart", "money" to "Money", "health" to "Health", "habits" to "Habits & goals", "time" to "Time", "work" to "Schedule", "student" to "Student")
     val styles = listOf(Triple("you", "Wallpaper", false), Triple("paper", "Paper", false), Triple("ink", "Ink", false), Triple("tint", "Tint", true), Triple("frost", "Frost", true), Triple("smoke", "Smoke", true), Triple("clear", "Clear", true))
@@ -61,7 +68,7 @@ object Catalog {
     val totalDesigns get() = types.sumOf { it.designs.size }
 
     /** The widgets offered in this version, in the order they're shown. The rest stay in code for later updates. */
-    val launch = listOf("countdown", "streak", "spend", "subs", "counter", "clock", "fast", "pace", "year", "today", "moon", "note", "next", "attendance", "now")
+    val launch = listOf("countdown", "weather", "aqi", "streak", "spend", "subs", "rates", "counter", "clock", "fast", "pace", "year", "today", "moon", "note", "next", "attendance", "now")
     val visible get() = launch.map { type(it) }
 
     val sizeName = mapOf("s" to "Small", "w" to "Wide", "m" to "Large")

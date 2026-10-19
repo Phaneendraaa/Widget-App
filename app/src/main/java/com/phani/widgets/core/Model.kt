@@ -92,6 +92,13 @@ class AppData(
     var look: String = "paper",
     /** Zoom for the app's three tabs (1 = normal size). Starts zoomed out so more fits at a glance. */
     var zoom: Float = 0.8f,
+    /** Live widgets: the picked city, its weather and air, and the rates you follow (see [Live]). */
+    var place: Place? = null,
+    var wx: Wx? = null,
+    var aq: Aq? = null,
+    val rates: MutableList<String> = mutableListOf(),
+    val quotes: MutableMap<String, Quote> = mutableMapOf(),
+    var tempF: Boolean = false,
 )
 
 /* ---------------- JSON ---------------- */
@@ -150,6 +157,7 @@ fun AppData.toJson(): JSONObject {
         .put("remHabit", remHabit).put("remHabitAt", remHabitAt).put("remSubs", remSubs).put("remFast", remFast).put("remWater", remWater)
         .put("look", look).put("zoomPct", (zoom * 100).roundToInt())
     o.put("notes", JSONArray(notes.map { JSONObject().put("id", it.id).put("text", it.text) }))
+    o.put("live", Live.write(this))
     return o
 }
 
@@ -197,7 +205,7 @@ fun appDataFrom(o: JSONObject): AppData {
         remFast = o.optBoolean("remFast", false), remWater = o.optBoolean("remWater", false),
         look = o.optString("look", "paper"), zoom = (o.optInt("zoomPct", 80) / 100f).coerceIn(0.5f, 1.4f),
         notes = (o.optJSONArray("notes") ?: JSONArray()).objs().map { Note(it.getString("id"), it.getString("text")) }.toMutableList(),
-    )
+    ).also { Live.read(o.optJSONObject("live"), it) }
 }
 
 /** A fresh start: nothing tracked, no widgets. */
@@ -206,7 +214,7 @@ fun emptyData(cur: String): AppData = AppData(
     dmy = cur !in listOf("USD", "CAD"), req = 75, theme = "auto", budget = 0.0, payday = 1,
     log = mutableListOf(), subs = mutableListOf(), habits = mutableListOf(), goals = mutableListOf(), dates = mutableListOf(),
     fast = Fast(null, 16, mutableListOf()), counters = mutableListOf(), clocks = mutableListOf(), subjects = mutableListOf(),
-    sched = mutableMapOf(), placed = mutableListOf(), bound = mutableMapOf(),
+    sched = mutableMapOf(), placed = mutableListOf(), bound = mutableMapOf(), tempF = cur == "USD",
 )
 
 /* ---------------- sample data ---------------- */
@@ -279,5 +287,35 @@ fun sampleData(cur: String): AppData {
         ),
         bound = mutableMapOf(),
         notes = mutableListOf(Note("n1", "Drink water. Call mum. Ship it on Friday.")),
-    )
+    ).also { sampleLive(it, cur) }
+}
+
+/** Example weather, air and rates for previews. */
+private fun sampleLive(d: AppData, cur: String) {
+    val now = System.currentTimeMillis()
+    val off = java.time.ZoneId.systemDefault().rules.getOffset(java.time.Instant.now()).totalSeconds
+    val h0 = java.time.LocalDateTime.now().withMinute(0).withSecond(0).withNano(0)
+    val codes = listOf(2, 2, 1, 1, 0, 0, 0, 1, 2, 3, 61, 61, 3, 2, 1, 0, 0, 0, 1, 1, 2, 2, 2, 1)
+    val hours = (0 until 24).map { i ->
+        val t = h0.plusHours(i.toLong())
+        val temp = 19.0 + 5.0 * kotlin.math.sin((t.hour - 9) / 24.0 * 2 * Math.PI)
+        WxHour(t.toString().take(16), temp, codes[i], if (codes[i] >= 61) 70 else 10)
+    }
+    val dc = listOf(2, 0, 61, 3, 1, 0, 2)
+    val days = (0 until 7).map { i -> WxDay(h0.toLocalDate().plusDays(i.toLong()).toString(), 24.0 - (i % 3), 15.0 + (i % 2), dc[i], if (dc[i] >= 61) 80 else 10) }
+    d.place = Place("Lisbon", "Portugal", 38.72, -9.14)
+    d.wx = Wx(now, 22.4, 21.6, 2, h0.hour in 7..18, 62, 11.0, off, hours, days, null, null)
+    d.aq = Aq(now, 42, 9.1, 16.2)
+    val k = when (cur) { "INR" -> 84.0; "EUR" -> 0.92; "GBP" -> 0.78; "JPY" -> 150.0; "AUD" -> 1.52; "CAD" -> 1.37; else -> 1.0 }
+    d.rates.addAll(Live.defaultRates(cur))
+    d.rates.forEach { key ->
+        d.quotes[key] = when {
+            key == "gold" -> Quote(2650.0 * k, 0.42, now)
+            key == "c:bitcoin" -> Quote(67250.0 * k, 1.84, now)
+            key == "c:ethereum" -> Quote(2610.0 * k, -0.73, now)
+            key.startsWith("fx:") -> Quote(if (key.endsWith("INR")) 84.07 else if (key.startsWith("fx:EUR")) 1.0864 else 1.3412, 0.12, now)
+            else -> Quote(150.0 * k, 0.5, now)
+        }
+    }
+    d.tempF = cur == "USD"
 }

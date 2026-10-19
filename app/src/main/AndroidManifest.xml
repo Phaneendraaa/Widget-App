@@ -3,6 +3,7 @@
 
     <!-- to start refreshing widgets again after the phone restarts -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- reminders: streak at risk, renewal tomorrow, fast done -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

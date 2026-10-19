@@ -97,6 +97,8 @@ class ScreensTest {
         step { Create.close(); Create.startFrom("attendance", "bars") }; shot("Editor, attendance")
         step { Create.close(); Create.startFrom("next", "card") }; shot("Editor, schedule")
         step { Create.close(); Create.startFrom("moon", "moon") }; shot("Editor, moon")
+        step { Create.close(); Create.startFrom("weather", "sky") }; shot("Editor, weather")
+        step { Create.close(); Create.startFrom("rates", "list") }; shot("Editor, rates")
         step { Create.close(); Nav.screen = "home"; com.phani.widgets.ui.Gallery.query = "glass" }; shot("Search: glass")
         step { com.phani.widgets.ui.Gallery.query = "ring" }; shot("Search: ring")
         step { com.phani.widgets.ui.Gallery.query = ""; Nav.screen = "settings" }; shot("Settings")

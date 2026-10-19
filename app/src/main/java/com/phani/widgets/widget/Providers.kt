@@ -89,6 +89,11 @@ abstract class BaseWidget : AppWidgetProvider() {
                 Widgets.prepare(context)
                 Widgets.updateAll(context)
                 Widgets.scheduleTick(context)
+                // weather, air and rates: fetch what's out of date, then redraw
+                if (com.phani.widgets.core.Live.wanted(AppStore.data)) {
+                    val pr = goAsync()
+                    com.phani.widgets.core.Live.refresh(context) { pr.finish() }
+                }
             }
         }
     }

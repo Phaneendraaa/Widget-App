@@ -94,6 +94,7 @@ object Create {
             else -> null
         }
         madeRef = ref
+        if (type == "rates" && AppStore.data.rates.isEmpty()) AppStore.change { rates.addAll(com.phani.widgets.core.Live.defaultRates(cur)) }
         conf = WConf(uid(), type, d.id, d.size, ref = ref, theme = theme ?: com.phani.widgets.widget.Themes.APP)
         this.bindId = bindId; editing = false; adding = false; open = true
     }
@@ -325,6 +326,9 @@ fun typeBlurb(type: String) = when (type) {
     "next" -> "What's next on your schedule"
     "attendance" -> "Classes you can miss, or must attend"
     "now" -> "The one thing that needs you"
+    "weather" -> "Now, the next hours, the week"
+    "aqi" -> "Is the air good today?"
+    "rates" -> "Currency, gold and crypto"
     else -> ""
 }
 
@@ -343,6 +347,8 @@ private fun infoOk(c: WConf): Boolean {
         "note" -> d.notes.firstOrNull { it.id == c.ref }?.text?.isNotBlank() == true
         "next" -> d.sched.values.any { it.isNotEmpty() }
         "attendance" -> d.subjects.isNotEmpty()
+        "weather", "aqi" -> d.place != null
+        "rates" -> d.rates.isNotEmpty()
         else -> true
     }
 }
@@ -363,6 +369,8 @@ private fun infoQuestion(c: WConf) = when (c.type) {
     "next" -> "Your weekly schedule"
     "attendance" -> "Your classes"
     "now" -> "Nothing to fill in"
+    "weather", "aqi" -> "Which city?"
+    "rates" -> "What do you want to follow?"
     else -> "Your details"
 }
 
@@ -380,6 +388,9 @@ private fun infoSub(c: WConf): String? = when (c.type) {
     "next" -> "Shows what's next and how long until it starts."
     "attendance" -> "Shows how many classes you can miss, or must attend."
     "now" -> "It looks across your other widgets and shows the one thing that needs you."
+    "weather" -> "It updates about every half hour, and shows the time since if it can't."
+    "aqi" -> "On the US AQI scale: green is good, red means limit time outside."
+    "rates" -> "The first one is shown on the small and wide sizes."
     else -> null
 }
 
@@ -400,6 +411,9 @@ private fun InfoFields(c: WConf) {
             "note" -> NoteInfo(c)
             "next" -> SchedInfo()
             "attendance" -> ClassesInfo()
+            "weather" -> { PlaceField(); TempUnitField() }
+            "aqi" -> PlaceField()
+            "rates" -> RatesField()
         }
         // how it's going, once the widget is saved (a new one has nothing to show yet)
         if (AppStore.data.placed.any { it.id == c.id }) StatsCard(c)
@@ -414,6 +428,8 @@ private fun hint(c: WConf) = when (c.type) {
     "note" -> "Write your note above"
     "next" -> "Add something to your schedule"
     "attendance" -> "Add a class above"
+    "weather", "aqi" -> "Pick a city above"
+    "rates" -> "Add a rate above"
     else -> "Give it a name above"
 }
 

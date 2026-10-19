@@ -166,7 +166,8 @@ private class Need(val title: String, val sub: String, val types: List<String>)
 
 private val NEEDS = listOf(
     Need("Count down to a day", "Trips, birthdays, exams, launches", listOf("countdown")),
-    Need("Money", "What's safe to spend, and what renews next", listOf("spend", "subs")),
+    Need("Weather & air", "Now, the next hours, the week, and the air", listOf("weather", "aqi")),
+    Need("Money", "Safe to spend, renewals, rates, gold and crypto", listOf("spend", "subs", "rates")),
     Need("Habits & goals", "Streaks you keep, goals with a deadline", listOf("streak", "pace")),
     Need("Health", "Water, fasting, anything you count", listOf("counter", "fast")),
     Need("Time & date", "Today, world clocks, the year, the moon", listOf("today", "clock", "year", "moon")),

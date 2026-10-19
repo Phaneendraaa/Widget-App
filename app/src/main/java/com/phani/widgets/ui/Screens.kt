@@ -55,7 +55,7 @@ fun SettingsScreen() {
     val p = pal()
     val d = AppStore.data
     Spacer(Modifier.height(12.dp))
-    TopBar("Settings", "Works offline. Nothing leaves your phone.")
+    TopBar("Settings", "No account. Your data stays on your phone.")
 
     SectionTitle("App appearance")
     Seg(listOf("auto" to "Auto", "light" to "Light", "dark" to "Dark"), d.theme) { AppStore.change { theme = it } }
@@ -80,10 +80,13 @@ fun SettingsScreen() {
     Spacer(Modifier.height(12.dp))
     Text("Dates", style = T.smallB, color = p.muted, modifier = Modifier.padding(bottom = 8.dp))
     Seg(listOf(false to "Oct 25", true to "25 Oct"), d.dmy) { AppStore.change { dmy = it } }
+    Spacer(Modifier.height(12.dp))
+    Text("Temperature", style = T.smallB, color = p.muted, modifier = Modifier.padding(bottom = 8.dp))
+    Seg(listOf(false to "°C", true to "°F"), d.tempF) { AppStore.change { tempF = it } }
 
     SectionTitle("Privacy")
     ListCard {
-        Feat(Ic.wifi, "No internet needed", "Every widget is calculated on your phone.")
+        Feat(Ic.wifi, "Offline, except live widgets", "Weather, air and rates fetch public data. Only the city or currencies you pick are sent. Everything else is worked out on your phone.")
         Feat(Ic.shield, "No account, no ads, no tracking", "Your data stays on this device and in your own phone backup.")
         Feat(Ic.bolt, "Easy on battery", "Widgets change when you tap them, or when the day or your schedule changes.")
     }
