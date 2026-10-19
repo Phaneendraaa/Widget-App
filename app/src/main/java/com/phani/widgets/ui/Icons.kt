@@ -31,6 +31,9 @@ object Ic {
     val gear = make("gear", 1.8f, false, "M12 9a3 3 0 1 1 0 6a3 3 0 1 1 0-6z", "M12 3v2.5", "M12 18.5V21", "M3 12h2.5", "M18.5 12H21", "M5.6 5.6l1.8 1.8", "M16.6 16.6l1.8 1.8", "M5.6 18.4l1.8-1.8", "M16.6 7.4l1.8-1.8")
     val plus = make("plus", 2f, false, "M12 5v14", "M5 12h14")
     val minus = make("minus", 2f, false, "M5 12h14")
+    val sun = make("sun", 1.9f, false, "M12 8a4 4 0 1 1 0 8a4 4 0 1 1 0-8z", "M12 2.5v2", "M12 19.5v2", "M2.5 12h2", "M19.5 12h2",
+        "M5.3 5.3l1.4 1.4", "M17.3 17.3l1.4 1.4", "M5.3 18.7l1.4-1.4", "M17.3 6.7l1.4-1.4")
+    val moon = make("moon", 1.9f, false, "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z")
     val check = make("check", 2.4f, false, "M5 12.5l4.5 4.5L19 7.5")
     val x = make("x", 2.2f, false, "M6 6l12 12", "M18 6L6 18")
     val up = make("up", 2.2f, false, "M6 14l6-6 6 6")

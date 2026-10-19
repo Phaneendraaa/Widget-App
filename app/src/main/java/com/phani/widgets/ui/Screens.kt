@@ -55,10 +55,19 @@ fun SettingsScreen() {
     val p = pal()
     val d = AppStore.data
     Spacer(Modifier.height(12.dp))
-    TopBar("Settings", "Works offline. Nothing leaves your phone.") { ZoomControl() }
+    TopBar("Settings", "Works offline. Nothing leaves your phone.")
 
     SectionTitle("App appearance")
     Seg(listOf("auto" to "Auto", "light" to "Light", "dark" to "Dark"), d.theme) { AppStore.change { theme = it } }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Zoom", style = T.bodyB, color = p.ink)
+            Text("Smaller fits more on screen. You can also pinch.", style = T.small, color = p.muted)
+        }
+        ZoomControl()
+    }
 
     SectionTitle("Reminders")
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { RemindersSection() }

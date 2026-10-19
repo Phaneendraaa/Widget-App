@@ -57,7 +57,8 @@ class ScreensTest {
         step { AppStore.change { onboarded = true } }; shot("Widgets (home)")
         step { com.phani.widgets.ui.Gallery.setZoom(1f) }; shot("Zoom 100%")
         step { com.phani.widgets.ui.Gallery.setZoom(1.4f) }; shot("Zoom 140%")
-        step { com.phani.widgets.ui.Gallery.setZoom(0.6f) }
+        step { com.phani.widgets.ui.Gallery.setZoom(0.6f); AppStore.change { theme = "dark" } }; shot("Dark mode")
+        step { AppStore.change { theme = "light" } }
         step { com.phani.widgets.ui.StyleSheet.pick("midnight") }; shot("Style: Midnight")
         step { com.phani.widgets.ui.StyleSheet.pick("glass") }; shot("Style: Glass")
         step { com.phani.widgets.ui.StyleSheet.pick("paper"); com.phani.widgets.ui.StyleSheet.open = true }; shot("Choose your style")

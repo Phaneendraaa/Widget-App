@@ -96,13 +96,31 @@ internal fun Modifier.pinchZoom(): Modifier = pointerInput(Unit) {
     }
 }
 
-/** − 100% + : make the previews smaller to see more at once, or bigger to see detail. Tap the number to reset. */
+/** Light or dark, one tap. Shows which one is on now (following the phone when set to Auto in Settings). */
+@Composable
+internal fun LightDark() {
+    AppStore.rev
+    val p = pal()
+    val sys = androidx.compose.foundation.isSystemInDarkTheme()
+    val dark = when (AppStore.data.theme) { "dark" -> true; "light" -> false; else -> sys }
+    Row(Modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.card).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        listOf(false to Ic.sun, true to Ic.moon).forEach { (d, ic) ->
+            val on = d == dark
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.ink else Color.Transparent)
+                .clickable { AppStore.change { theme = if (d) "dark" else "light" } }, contentAlignment = Alignment.Center) {
+                Icon(ic, if (d) "Dark" else "Light", tint = if (on) p.paper else p.muted, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+/** − 100% + : make everything smaller to see more at once, or bigger to read easily. Tap the number to reset. */
 @Composable
 internal fun ZoomControl() {
     AppStore.rev
     val p = pal()
     val z = Gallery.shown()
-    Row(Modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.card).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.paper).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).clickable(enabled = z > Gallery.MIN + 0.01f) { Gallery.zoomOut() }, contentAlignment = Alignment.Center) {
             Icon(Ic.minus, "Zoom out", tint = if (z > Gallery.MIN + 0.01f) p.ink else p.muted.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
         }
@@ -159,7 +177,7 @@ private val NEEDS = listOf(
 fun GalleryScreen() {
     AppStore.rev
     val p = pal()
-    TopTitle("Widgets") { ZoomControl() }
+    TopTitle("Widgets") { LightDark() }
     StyleCard()
     val size = Gallery.size
     if (size != null) {
@@ -293,7 +311,7 @@ fun MineScreen() {
     AppStore.rev
     val p = pal()
     val d = AppStore.data
-    TopTitle("My widgets") { ZoomControl() }
+    TopTitle("My widgets") { LightDark() }
     if (d.placed.isEmpty()) {
         Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Nothing here yet", style = T.h3, color = p.ink)
