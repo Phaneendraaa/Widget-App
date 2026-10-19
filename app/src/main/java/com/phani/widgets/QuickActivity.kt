@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -77,6 +79,7 @@ class QuickActivity : ComponentActivity() {
         /** Widget types whose body tap opens this panel. */
         fun kindFor(type: String): String? = when (type) {
             "spend" -> "spend"; "fast" -> "fast"; "counter" -> "counter"; "streak" -> "habit"; "pace" -> "goal"
+            "countdown", "subs", "attendance", "next", "year", "today", "moon" -> "stats"
             else -> null
         }
 
@@ -101,8 +104,10 @@ class QuickActivity : ComponentActivity() {
                 val p = pal()
                 Box(Modifier.fillMaxSize().background(p.scrim).clickable(remember { MutableInteractionSource() }, null) { finish() }, contentAlignment = Alignment.BottomCenter) {
                     Column(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(p.paper)
+                        Modifier.fillMaxWidth().heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.9f).dp)
+                            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(p.paper)
                             .clickable(remember { MutableInteractionSource() }, null) {}
+                            .verticalScroll(rememberScrollState())
                             .windowInsetsPadding(WindowInsets.navigationBars).padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
@@ -112,7 +117,20 @@ class QuickActivity : ComponentActivity() {
                             "counter" -> CounterPanel(ref, cid)
                             "habit" -> HabitPanel(ref, cid)
                             "goal" -> GoalPanel(ref, cid)
+                            "stats" -> StatsPanel(cid)
                             else -> finish()
+                        }
+                        // how it's going, right from the home screen
+                        val conf = AppStore.data.placed.firstOrNull { it.id == cid }
+                        if (conf != null) {
+                            if (kind != "stats") com.phani.widgets.ui.StatsCard(conf)
+                            Text("Edit this widget", style = T.smallB, color = p.muted, textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable {
+                                    startActivity(Intent(this@QuickActivity, MainActivity::class.java)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                        .putExtra("open", "open").putExtra("cid", conf.id))
+                                    finish()
+                                }.padding(10.dp))
                         }
                     }
                 }
@@ -139,6 +157,16 @@ class QuickActivity : ComponentActivity() {
                 Icon(Ic.x, "Close", tint = p.ink, modifier = Modifier.size(18.dp))
             }
         }
+    }
+
+    /* ---------- Stats only, for widgets without quick actions ---------- */
+
+    @Composable
+    private fun ColumnScope.StatsPanel(cid: String?) {
+        AppStore.rev
+        val c = AppStore.data.placed.firstOrNull { it.id == cid } ?: run { finish(); return }
+        Header(com.phani.widgets.ui.widgetName(c), com.phani.widgets.core.Catalog.type(c.type).name)
+        com.phani.widgets.ui.StatsCard(c)
     }
 
     /* ---------- Spending: any amount, with a category ---------- */

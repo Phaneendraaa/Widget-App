@@ -35,11 +35,15 @@ class QuickTest {
             onboarded = true; budget = 2400.0
             counters.add(Counter("c1", "Water", "glasses", 8, mutableMapOf(today().toString() to 3)))
             habits.add(Habit("h1", "Run", 5, 1, mutableSetOf(today().minusDays(1).toString()), mutableSetOf()))
+            dates.add(com.phani.widgets.core.DateItem("d1", "Goa trip", today().plusDays(40).toString(), false))
+            placed.add(com.phani.widgets.core.WConf("x", "counter", "glass", "s", ref = "c1"))
+            placed.add(com.phani.widgets.core.WConf("y", "countdown", "big", "s", ref = "d1"))
+            counters.firstOrNull()?.log?.apply { (1L..6L).forEach { put(today().minusDays(it).toString(), (2 + it % 6).toInt()) } }
             goals.add(Goal("g1", "Books this year", "books", 24.0, 9.0, today().minusDays(100).toString(), today().plusDays(60).toString(), 1.0))
         }
         val shots = mutableListOf<Pair<String, Bitmap>>()
-        fun cap(name: String, kind: String, ref: String?) {
-            val c = Robolectric.buildActivity(QuickActivity::class.java, QuickActivity.intent(ctx, kind, ref, "x")).setup()
+        fun cap(name: String, kind: String, ref: String?, cid: String = "x") {
+            val c = Robolectric.buildActivity(QuickActivity::class.java, QuickActivity.intent(ctx, kind, ref, cid)).setup()
             Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
             val v = c.get().window.decorView
             val b = Bitmap.createBitmap(maxOf(1, v.width), maxOf(1, v.height), Bitmap.Config.ARGB_8888)
@@ -53,6 +57,7 @@ class QuickTest {
         cap("Counter", "counter", "c1")
         cap("Streak", "habit", "h1")
         cap("Pace", "goal", "g1")
+        cap("Stats: countdown", "stats", null, "y")
         val k = 0.36f
         val cw = (shots[0].second.width * k).toInt(); val ch = (shots[0].second.height * k).toInt()
         val cols = 3; val gap = 30; val lab = 50
