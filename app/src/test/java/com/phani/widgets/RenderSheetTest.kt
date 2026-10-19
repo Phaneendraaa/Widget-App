@@ -35,12 +35,7 @@ class RenderSheetTest {
         val items = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, if (t.type == "now") "ink" else "paper", ref = Catalog.defaultRef(t.type)) } } + listOf(
             WConf("t", "spend", "ring", "s", accent = "#9BBF2A", bg = "#1E3A5F", radius = 8, outline = true, title = "Coffee money"),
             WConf("t", "spend", "number", "s", opt = "period"),
-        ) + listOf("midnight", "neon", "retro", "glassdark", "modern").flatMap { th -> listOf(
-            WConf("t", "countdown", "pass", "m", theme = th, ref = Catalog.defaultRef("countdown")),
-            WConf("t", "countdown", "tear", "s", theme = th, ref = Catalog.defaultRef("countdown")),
-            WConf("t", "countdown", "led", "w", theme = th, ref = Catalog.defaultRef("countdown")),
-            WConf("t", "clock", "word", "s", theme = th),
-        ) } + com.phani.widgets.widget.Themes.all.flatMap { th -> listOf(
+        ) + com.phani.widgets.widget.Themes.all.flatMap { th -> listOf(
             WConf("t", "countdown", "big", "s", theme = th.id, ref = Catalog.defaultRef("countdown")),
             WConf("t", "streak", "heat", "m", theme = th.id),
             WConf("t", "clock", "pair", "w", theme = th.id),
@@ -50,6 +45,16 @@ class RenderSheetTest {
             WConf("t", "countdown", "flip", "w", accent = "#D6409F", bg = "#FDE2E4", alpha = 70, title = "Goa trip", ref = Catalog.defaultRef("countdown")),
             WConf("t", "streak", "heat", "m", "ink", "#0EA5A4", fg = "#F0B400", radius = 0, ref = Catalog.defaultRef("streak")),
         )
+        draw(items, sizes, k, File("build/sheet.png"), photo = false)
+        // Signature designs in a range of themes, over a photo-like wallpaper so cut-outs and glass show
+        val sigs = Catalog.types.flatMap { t -> t.designs.filter { it.sig }.map { t to it } }
+        val sigItems = listOf("paper", "midnight", "glass", "modern", "retro", "neon", "terminal", "pastel", "newspaper").flatMap { th ->
+            sigs.map { (t, d) -> WConf("t", t.type, d.id, d.size, theme = th, ref = Catalog.defaultRef(t.type)) }
+        }
+        draw(sigItems, sizes, k, File("build/sig.png"), photo = true)
+    }
+
+    private fun draw(items: List<WConf>, sizes: Map<String, Pair<Float, Float>>, k: Float, f: File, photo: Boolean) {
         val gap = 16
         val colW = (370 * k).toInt()
         val cells = items.map { c ->
@@ -60,8 +65,10 @@ class RenderSheetTest {
         val rowsH = cells.chunked(cols).map { r -> r.maxOf { it.first.height } + (24 * k).toInt() + gap }
         val out = Bitmap.createBitmap(cols * (colW + gap) + gap, rowsH.sum() + gap, Bitmap.Config.ARGB_8888)
         val cv = Canvas(out)
-        cv.drawColor(Color.rgb(0xD7, 0xD3, 0xCA))
-        val tp = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12 * k; color = Color.BLACK }
+        if (photo) cv.drawPaint(Paint().apply { shader = android.graphics.LinearGradient(0f, 0f, out.width.toFloat(), out.height.toFloat(),
+            intArrayOf(Color.rgb(0x2B, 0x58, 0x76), Color.rgb(0xD3, 0x8A, 0x5C), Color.rgb(0xF2, 0xC3, 0x8B), Color.rgb(0x3A, 0x4E, 0x6E)), null, android.graphics.Shader.TileMode.CLAMP) })
+        else cv.drawColor(Color.rgb(0xD7, 0xD3, 0xCA))
+        val tp = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12 * k; color = if (photo) Color.WHITE else Color.BLACK }
         var y = gap
         cells.chunked(cols).forEachIndexed { ri, r ->
             r.forEachIndexed { ci, (bmp, name) ->
@@ -71,7 +78,6 @@ class RenderSheetTest {
             }
             y += rowsH[ri]
         }
-        val f = File("build/sheet.png")
         f.parentFile?.mkdirs()
         FileOutputStream(f).use { out.compress(Bitmap.CompressFormat.PNG, 100, it) }
         println("SHEET " + f.absolutePath)
