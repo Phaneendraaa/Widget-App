@@ -20,6 +20,12 @@ import com.phani.widgets.core.cnt
 import com.phani.widgets.core.fastState
 import com.phani.widgets.core.pace
 import com.phani.widgets.core.streak
+import com.phani.widgets.core.CUR
+import com.phani.widgets.core.Catalog
+import com.phani.widgets.core.spendState
+import com.phani.widgets.core.spendView
+import android.graphics.RectF
+import android.text.TextPaint
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.TextStyle
@@ -65,6 +71,7 @@ object Signature {
             "streak/flame" -> flame(x)
             "fast/arc" -> sunArc(x)
             "pace/climb" -> summit(x)
+            "spend/metal" -> metal(x)
             else -> return false
         }
         return true
@@ -78,7 +85,7 @@ object Signature {
     }
 
     private fun Ctx.nothing(msg: String) {
-        label(ttl("Countdown"), pad, pad + 11.5f)
+        label(ttl(Catalog.type(conf.type).name), pad, pad + 11.5f)
         small(msg, pad, H - pad - 2f)
     }
 
@@ -667,5 +674,103 @@ object Signature {
         // you, on the trail
         circle(hx, hy, 6f, fill(p.bg or 0xFF000000.toInt()))
         circle(hx, hy, 4.5f, fill(p.acc))
+    }
+
+    /* ---------- Metal card ---------- */
+
+    private fun mix(c1: Int, c2: Int, t: Float): Int {
+        fun ch(sh: Int) = (((c1 shr sh) and 0xFF) * (1 - t) + ((c2 shr sh) and 0xFF) * t).roundToInt().coerceIn(0, 255)
+        return (0xFF shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
+    }
+
+    /** Fine horizontal grain and a soft band of light, like brushed metal. */
+    private fun Ctx.brushed(dark: Boolean) {
+        val rnd = java.util.Random(7)
+        val pt = Paint().apply { strokeWidth = px(0.6f) }
+        var y = 0f
+        while (y < H) {
+            val v = rnd.nextFloat()
+            pt.color = if (rnd.nextBoolean()) a((if (dark) 0.015f else 0.05f) + 0.035f * v, WHITE) else a(0.012f + 0.03f * v, 0xFF000000.toInt())
+            c.drawLine(0f, px(y), px(W), px(y), pt)
+            y += 0.9f
+        }
+        c.drawRect(0f, 0f, px(W), px(H), Paint().apply {
+            shader = LinearGradient(0f, 0f, px(W), px(H),
+                intArrayOf(0, a(if (dark) 0.09f else 0.32f, WHITE), 0, a(if (dark) 0.05f else 0.16f, WHITE), 0),
+                floatArrayOf(0f, 0.32f, 0.52f, 0.78f, 1f), Shader.TileMode.CLAMP)
+        })
+    }
+
+    /** A gold contact chip. */
+    private fun Ctx.chip(x0: Float, y0: Float, w: Float, h: Float) {
+        val r = RectF(px(x0), px(y0), px(x0 + w), px(y0 + h))
+        c.drawRoundRect(r, px(5f), px(5f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(r.left, r.top, r.right, r.bottom,
+                intArrayOf(0xFFF7E6A8.toInt(), 0xFFC9A24E.toInt(), 0xFFEFD58E.toInt(), 0xFFAE873A.toInt()), floatArrayOf(0f, 0.4f, 0.65f, 1f), Shader.TileMode.CLAMP)
+        })
+        val ln = stroke(0xA0735418.toInt(), 0.8f); ln.strokeCap = Paint.Cap.BUTT
+        val l = x0 + w * 0.34f; val rr = x0 + w * 0.66f; val t = y0 + h * 0.3f; val b = y0 + h * 0.7f
+        rrect(l, t, rr - l, b - t, 2.5f, ln)
+        for (yy in listOf(y0 + h * 0.36f, y0 + h * 0.64f)) { line(x0, yy, l, yy, ln); line(rr, yy, x0 + w, yy, ln) }
+        line(x0 + w / 2, y0, x0 + w / 2, t, ln); line(x0 + w / 2, b, x0 + w / 2, y0 + h, ln)
+        ln.color = 0x50735418; ln.strokeWidth = px(0.7f)
+        c.drawRoundRect(r, px(5f), px(5f), ln)
+    }
+
+    /** The tap-to-pay waves. */
+    private fun Ctx.contactless(right: Float, cy: Float, col: Int) {
+        val pt = stroke(col, 1.5f)
+        val cx = right - 11f
+        for (i in 1..4) {
+            val r = 2.7f * i
+            c.drawArc(RectF(px(cx - r), px(cy - r), px(cx + r), px(cy + r)), -42f, 84f, false, pt)
+        }
+    }
+
+    /** Raised card lettering: a dark edge below, a light edge above, a foil-like face. */
+    private fun Ctx.emboss(s: String, x0: Float, base: Float, size: Float, col: Int, dark: Boolean) {
+        val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = px(size); typeface = monoFace(500); letterSpacing = 0.01f }
+        tp.color = a(if (dark) 0.8f else 0.30f, 0xFF000000.toInt()); c.drawText(s, px(x0), px(base + 1.1f), tp)
+        tp.color = a(if (dark) 0.20f else 0.95f, WHITE); c.drawText(s, px(x0), px(base - 0.9f), tp)
+        tp.color = col
+        tp.shader = LinearGradient(0f, px(base - cap(size)), 0f, px(base),
+            mix(col, WHITE, if (dark) 0.15f else 0.28f), mix(col, 0xFF000000.toInt(), if (dark) 0.22f else 0.05f), Shader.TileMode.CLAMP)
+        c.drawText(s, px(x0), px(base), tp)
+    }
+
+    private fun Ctx.embossW(s: String, size: Float) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = px(size); typeface = monoFace(500); letterSpacing = 0.01f }.measureText(s) / px(1f)
+
+    private fun metal(x: Ctx) = with(x) {
+        val s = spendState()
+        val v = spendView(s, conf.opt)
+        val dark = luma(p.bg or 0xFF000000.toInt()) < 0.5f
+        brushed(dark)
+        val m = 18f
+        if (D.budget <= 0) { nothing("Set your budget"); return@with }
+        val over = v.value < 0
+        val q = (CUR[D.cur] ?: CUR.getValue("USD")).quick
+        label(ttl(v.label), m, m + 9f, W - 2 * m - 34f)
+        contactless(W - m, m + 5f, a(0.6f, p.fg))
+        // bottom row: resets date like a card's expiry, and the buttons
+        val bh = 34f; val btnY = H - m - bh
+        text("RESETS", m, H - m - 15f, 7f, monoFace(500), p.mut, 0.14f)
+        text(Fmt.short(s.resets).uppercase(), m, H - m - 2f, 12f, monoFace(500), a(0.85f, p.fg), 0.06f)
+        val plusX = W - m - bh
+        button(plusX, btnY, bh, bh, "ghost", "spend-open", ic = Paths.plus, icSize = 16f)
+        val pw = 60f
+        button(plusX - 6f - pw, btnY, pw, bh, "solid", "spend-q", value = q[0].toString(), text = "+${q[0]}")
+        // the chip and the raised amount
+        val big = if (over) "−" + Fmt.money(-v.value) else Fmt.money(v.value)
+        val chipW = 38f; val chipH = 29f
+        val ax = m + chipW + 14f
+        val zoneTop = m + 20f; val zoneBot = btnY - 6f
+        var sz = min(34f, (zoneBot - zoneTop - 22f) / 0.72f)
+        val wNow = embossW(big, sz)
+        if (wNow > W - ax - m) sz = max(14f, sz * (W - ax - m) / wNow)
+        val block = cap(sz) + 17f
+        val ab = zoneTop + (zoneBot - zoneTop - block) / 2 + cap(sz)
+        chip(m, ab - cap(sz) / 2 - chipH / 2, chipW, chipH)
+        emboss(big, ax, ab, sz, if (over) p.acc else p.fg, dark)
+        small((if (over) "over, " else "left ") + v.of, ax, ab + 17f, maxW = W - ax - m)
     }
 }

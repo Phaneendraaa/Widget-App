@@ -287,6 +287,7 @@ fun preferredHeight(conf: WConf, widthDp: Float): Float = when (conf.size) {
     else -> when ("${conf.type}/${conf.design}") {
         "streak/heat" -> 224f
         "spend/receipt" -> 214f
+        "spend/metal" -> 200f
         "countdown/stack" -> 196f
         "next/today" -> 200f
         "year/dots" -> 196f
