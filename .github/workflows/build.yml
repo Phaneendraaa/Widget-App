@@ -54,6 +54,7 @@ jobs:
           [ -f app/build/screens.png ] && cp app/build/screens.png screens.png && EXTRA="$EXTRA screens.png"
           [ -f app/build/quick.png ] && cp app/build/quick.png quick.png && EXTRA="$EXTRA quick.png"
           [ -f app/build/sig.png ] && cp app/build/sig.png sig.png && EXTRA="$EXTRA sig.png"
+          [ -f app/build/sig2.png ] && cp app/build/sig2.png sig2.png && EXTRA="$EXTRA sig2.png"
           gh release create latest widget-app.apk $EXTRA \
             --title "Latest build" \
             --notes "Build from commit ${GITHUB_SHA::7}" \

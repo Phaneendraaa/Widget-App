@@ -52,6 +52,11 @@ class RenderSheetTest {
             sigs.map { (t, d) -> WConf("t", t.type, d.id, d.size, theme = th, ref = Catalog.defaultRef(t.type)) }
         }
         draw(sigItems, sizes, k, File("build/sig.png"), photo = true)
+        // the remaining styles, so every design is checked in every style
+        val sig2 = listOf("glassdark", "ocean", "sunset", "ink", "wallpaper", "clear").flatMap { th ->
+            sigs.map { (t, d) -> WConf("t", t.type, d.id, d.size, theme = th, ref = Catalog.defaultRef(t.type)) }
+        }
+        draw(sig2, sizes, k, File("build/sig2.png"), photo = true)
     }
 
     private fun draw(items: List<WConf>, sizes: Map<String, Pair<Float, Float>>, k: Float, f: File, photo: Boolean) {

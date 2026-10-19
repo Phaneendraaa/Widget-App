@@ -139,7 +139,7 @@ fun GalleryScreen() {
         ) {
             items(items.size) { i ->
                 val (t, d) = items[i]
-                DesignCard(t, d, Modifier.width(if (d.size == "s") 156.dp else 286.dp), boxH = 168.dp)
+                DesignCard(t, d, Modifier.width(if (d.size == "s") 148.dp else 252.dp), boxH = 150.dp, zoom = 0.7f)
             }
         }
     }
@@ -186,7 +186,7 @@ private fun SearchResults(q: String, size: String?) {
 }
 
 @Composable
-private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier, boxH: androidx.compose.ui.unit.Dp? = null) {
+private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier, boxH: androidx.compose.ui.unit.Dp? = null, zoom: Float = 0.78f) {
     AppStore.rev
     val p = pal()
     // every design is shown in the user's own style, so what they see is what they get
@@ -195,7 +195,7 @@ private fun DesignCard(t: TypeDef, d: DesignDef, modifier: Modifier, boxH: andro
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(p.card).clickable { open() }) {
         Box(Modifier.fillMaxWidth().then(if (boxH != null) Modifier.height(boxH) else Modifier).background(themeBackdrop(AppStore.look)).padding(10.dp),
             contentAlignment = Alignment.Center) {
-            Zoomed(conf, 0.78f, maxH = boxH?.let { it.value - 20f }) { open() }
+            Zoomed(conf, zoom, maxH = boxH?.let { it.value - 20f }) { open() }
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
             if (d.sig) {

@@ -188,14 +188,10 @@ fun CreateScreen() {
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = Pad).padding(top = 18.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionHead("1", infoQuestion(c), infoSub(c))
+            Question(infoQuestion(c), infoSub(c))
             InfoFields(c)
-            Spacer(Modifier.height(4.dp))
-            SectionHead("2", "Size on your home screen", null)
-            SizePicker(c)
-            Spacer(Modifier.height(4.dp))
-            SectionHead("3", "Look", "It uses your style, so your home screen matches.")
-            StyleSection(c)
+            Spacer(Modifier.height(2.dp))
+            Options(c)
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = Pad).padding(top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             when {
@@ -219,17 +215,39 @@ private fun RoundBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc
 }
 
 @Composable
-private fun SectionHead(n: String, title: String, sub: String?) {
+private fun Question(title: String, sub: String?) {
     val p = pal()
-    Row(verticalAlignment = Alignment.Top) {
-        Box(Modifier.size(26.dp).clip(RoundedCornerShape(13.dp)).background(p.ink), contentAlignment = Alignment.Center) {
-            Text(n, style = T.smallB, color = p.paper)
-        }
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Text(title, style = T.h3.copy(fontSize = 19.sp), color = p.ink)
-            if (sub != null) Text(sub, style = T.small, color = p.muted, modifier = Modifier.padding(top = 2.dp))
-        }
+    Column {
+        Text(title, style = T.h3.copy(fontSize = 20.sp), color = p.ink)
+        if (sub != null) Text(sub, style = T.small, color = p.muted, modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/** Size and look are already picked (the card you tapped, and your style), so they sit folded away as two rows. */
+@Composable
+private fun Options(c: WConf) {
+    val p = pal()
+    var open by remember(c.id) { mutableStateOf<String?>(null) }
+    val d = Catalog.design(c.type, c.design)
+    val look = if (c.theme == com.phani.widgets.widget.Themes.APP) "Your style · ${StyleSheet.current().name}"
+        else com.phani.widgets.widget.Themes.get(c.theme)?.name ?: "Its own colours"
+    OptRow("Size", "${Catalog.sizeName[c.size]} ${Catalog.sizeGrid[c.size]} · ${d.name}", open == "size") { open = if (open == "size") null else "size" }
+    if (open == "size") {
+        SizePicker(c)
+        if (Catalog.type(c.type).designs.count { it.size == c.size } > 1) { FieldLabel("Layout"); DesignTab(c) { Create.conf = it } }
+    }
+    OptRow("Look", look, open == "look") { open = if (open == "look") null else "look" }
+    if (open == "look") StyleSection(c)
+}
+
+@Composable
+private fun OptRow(label: String, value: String, open: Boolean, onClick: () -> Unit) {
+    val p = pal()
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = T.small, color = p.muted, modifier = Modifier.width(52.dp))
+        Text(value, style = T.smallB, color = p.ink, maxLines = 1, modifier = Modifier.weight(1f))
+        Text(if (open) "Done" else "Change", style = T.smallB, color = p.muted)
     }
 }
 
@@ -596,12 +614,6 @@ private fun StyleSection(c: WConf) {
     AppStore.rev
     val p = pal()
     val set: (WConf) -> Unit = { Create.conf = it }
-    if (Catalog.type(c.type).designs.count { it.size == c.size } > 1) {
-        FieldLabel("Layout")
-        DesignTab(c, set)
-        Spacer(Modifier.height(4.dp))
-    }
-    FieldLabel("Look")
     val APP = com.phani.widgets.widget.Themes.APP
     val follows = c.theme == APP
     val style = StyleSheet.current()
