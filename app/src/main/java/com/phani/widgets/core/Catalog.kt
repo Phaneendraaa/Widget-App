@@ -55,7 +55,7 @@ object Catalog {
                 DesignDef("now", "Now", "s"), DesignDef("hours", "Next hours", "w"), DesignDef("week", "Week", "m")), isNew = true),
         TypeDef("aqi", "Air quality", "outside", "How clean the air is in your city right now, and what it means for going out.",
             listOf(DesignDef("gauge", "Gauge", "s"), DesignDef("strip", "Scale", "w")), isNew = true),
-        TypeDef("rates", "Rates", "money", "Exchange rates, gold and crypto, updated through the day.",
+        TypeDef("rates", "Rates", "finance", "Exchange rates, gold and crypto, updated through the day.",
             listOf(DesignDef("list", "List", "m"), DesignDef("ticker", "Ticker", "w"), DesignDef("one", "One rate", "s")), isNew = true),
     )
     val cats = listOf("all" to "All", "smart" to "Smart", "money" to "Money", "health" to "Health", "habits" to "Habits & goals", "time" to "Time", "work" to "Schedule", "student" to "Student")
