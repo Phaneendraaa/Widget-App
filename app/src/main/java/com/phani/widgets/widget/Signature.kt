@@ -204,16 +204,17 @@ object Signature {
         val gap = pitch * 1.2f
         val w = s.length * 5 * pitch + (s.length - 1) * gap
         var x0 = right - w
-        val r = pitch * 0.36f
+        val r = pitch * 0.4f
+        val glow = luma(p.bg or 0xFF000000.toInt()) < 0.45f
         s.forEach { ch ->
             val g = GLYPHS[ch] ?: GLYPHS.getValue('0')
             for (i in 0 until 35) {
                 val cx = x0 + (i % 5) * pitch + pitch / 2
                 val cy = top + (i / 5) * pitch + pitch / 2
                 if (g[i] == '1') {
-                    circle(cx, cy, r * 1.9f, fill(a(0.16f, on)))
+                    if (glow) circle(cx, cy, r * 1.55f, fill(a(0.22f, on)))
                     circle(cx, cy, r, fill(on))
-                } else circle(cx, cy, r * 0.8f, fill(off))
+                } else circle(cx, cy, r * 0.75f, fill(off))
             }
             x0 += 5 * pitch + gap
         }
@@ -224,8 +225,8 @@ object Signature {
         val dn = date() ?: run { nothing("Add a date"); return@with }
         val (d, n) = dn
         val s = n.days.toString()
-        var pitch = (H - 30f) / 7f
-        val maxW = W * 0.56f
+        var pitch = (H - 22f) / 7f
+        val maxW = W * 0.58f
         val need = s.length * 5 * pitch + (s.length - 1) * pitch * 1.2f
         if (need > maxW) pitch *= maxW / need
         val top = (H - 7 * pitch) / 2
@@ -316,7 +317,7 @@ object Signature {
             seed = seed * 1103515245 + 12345; val sx = ((seed ushr 8) and 0xFFFF) / 65535f * W
             seed = seed * 1103515245 + 12345; val sy = ((seed ushr 8) and 0xFFFF) / 65535f * H * 0.8f
             seed = seed * 1103515245 + 12345; val sr = 0.4f + ((seed ushr 12) and 7) / 7f * 0.9f
-            circle(sx, sy, sr, fill(a(0.35f + sr * 0.4f, 0xFFFFFF)))
+            if (sy > pad + 16f || (sx > pad + 50f && sx < W - pad - 40f)) circle(sx, sy, sr, fill(a(0.35f + sr * 0.4f, 0xFFFFFF)))
         }
         val age = moonAge()
         val r = min(W, H) * 0.24f
