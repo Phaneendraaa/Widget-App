@@ -497,25 +497,32 @@ object Designs {
         }
         when (conf.design) {
             "heat" -> {
-                val gap0 = 3f; val rows0 = 7
-                val gtop0 = pad + 22f + cap(26f) + 6f + 14f
-                val cell0 = ((H - pad - gtop0 - gap0 * (rows0 - 1)) / rows0).coerceIn(7f, 13f)
-                val cols = (((W - 2 * pad + gap0) / (cell0 + gap0)).toInt()).coerceIn(12, 30)
-                if (showLabel) label(ttl("${h.name} · $cols weeks"), pad, pad + 11.5f, W - 2 * pad - 52f)
+                // the grid fills whatever space the home screen gives it: bigger squares, or a second band of older weeks when it's tall
+                val gap = 3f; val rows = 7; val bandGap = 9f; val maxCell = 16f
                 val base = pad + 22f + cap(26f) + 6f
+                val gtop = base + 14f
+                val avH = H - pad - gtop; val avW = W - 2 * pad
+                val bands = ((avH + bandGap) / (rows * 13f + (rows - 1) * gap + bandGap)).toInt().coerceIn(1, 3)
+                val cellH = min(maxCell, (avH - (bands - 1) * bandGap - bands * (rows - 1) * gap) / (rows * bands))
+                val cols = ((avW + gap) / (cellH + gap)).toInt().coerceIn(8, 30)
+                val cell = min(cellH, (avW - gap * (cols - 1)) / cols)
+                val weeks = cols * bands
+                if (showLabel) label(ttl("${h.name} · $weeks weeks"), pad, pad + 11.5f, W - 2 * pad - 52f)
                 val w = num(st.n.toString(), pad, base, 26f)
                 text("day streak · $rec", pad + w + 6f, base, 14f, uiFace(500), p.fg, maxW = W - 2 * pad - w - 60f)
                 button(W - pad - 44f, pad, 44f, 44f, if (st.today) "ghost" else "acc", "hab", h.id, ic = Paths.check)
-                val rows = 7; val gap = 3f
-                val gtop = base + 14f
-                val cell = min((W - 2 * pad - gap * (cols - 1)) / cols, (H - pad - gtop - gap * (rows - 1)) / rows)
-                val gx = pad + ((W - 2 * pad) - (cols * cell + (cols - 1) * gap)) / 2
-                val start = t0.minusDays((cols * rows - 1).toLong())
-                for (i in 0 until cols * rows) {
-                    val col = i / rows; val row = i % rows
+                val bandH = rows * cell + (rows - 1) * gap
+                val gridH = bands * bandH + (bands - 1) * bandGap
+                val gx = pad + (avW - (cols * cell + (cols - 1) * gap)) / 2
+                val gy = gtop + (avH - gridH) / 2
+                // oldest weeks first; today is the last square, bottom right
+                val start = t0.minusDays((weeks * rows - 1).toLong())
+                for (i in 0 until weeks * rows) {
+                    val wk = i / rows; val row = i % rows
+                    val band = wk / cols; val col = wk % cols
                     val k = start.plusDays(i.toLong()).toString()
-                    val cx = gx + col * (cell + gap); val cy = gtop + row * (cell + gap)
-                    val last = i == cols * rows - 1
+                    val cx = gx + col * (cell + gap); val cy = gy + band * (bandH + bandGap) + row * (cell + gap)
+                    val last = i == weeks * rows - 1
                     when {
                         h.done.contains(k) -> rrect(cx, cy, cell, cell, 2.5f, fill(if (last) p.acc else p.fg))
                         h.frozen.contains(k) -> rrect(cx + 0.75f, cy + 0.75f, cell - 1.5f, cell - 1.5f, 2.5f, stroke(p.mut, 1.5f))

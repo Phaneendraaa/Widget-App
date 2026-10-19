@@ -46,6 +46,10 @@ class RenderSheetTest {
             WConf("t", "streak", "heat", "m", "ink", "#0EA5A4", fg = "#F0B400", radius = 0, ref = Catalog.defaultRef("streak")),
         )
         draw(items, sizes, k, File("build/sheet.png"), photo = false)
+        // the same designs when the home screen gives them a taller space (resized, or a launcher with tall cells)
+        val tall = mapOf("s" to (176f to 250f), "w" to (364f to 126f), "m" to (300f to 290f))
+        val plain = Catalog.types.flatMap { t -> t.designs.map { d -> WConf("t", t.type, d.id, d.size, theme = "paper", ref = Catalog.defaultRef(t.type)) } }
+        draw(plain, tall, k, File("build/tall.png"), photo = false)
         // Signature designs in a range of themes, over a photo-like wallpaper so cut-outs and glass show
         val sigs = Catalog.types.flatMap { t -> t.designs.filter { it.sig }.map { t to it } }
         val sigItems = listOf("paper", "midnight", "glass", "modern", "retro", "neon", "terminal", "pastel", "newspaper").flatMap { th ->
