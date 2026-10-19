@@ -394,13 +394,16 @@ object LiveDesigns {
                     val q = D.quotes[k]
                     val y = top + rh * i
                     if (i > 0) line(pad, y, W - pad, y, stroke(p.soft, 1f))
-                    val base = y + rh / 2 + 1f
+                    // a second line only when the rows have room for it
+                    val roomy = rh >= 34f
+                    val base = if (roomy) y + rh / 2 + 1f else y + rh / 2 + 5f
                     t2(Live.quoteName(k), pad, base, 14f, maxW = W * 0.4f)
-                    small(Live.quoteSub(k, cur), pad, base + 13f, size = 10.5f, maxW = W * 0.42f)
-                    if (q == null) { small("…", W - pad, base + 5f, align = R); return@forEachIndexed }
+                    if (roomy) small(Live.quoteSub(k, cur), pad, base + 13f, size = 10.5f, maxW = W * 0.42f)
+                    val vb = if (roomy) base + 5f else base
+                    if (q == null) { small("…", W - pad, vb, align = R); return@forEachIndexed }
                     val v = Live.fmt(k, q.v, cur)
-                    text(v, W - pad - 74f, base + 5f, fitText(v, 16f, W * 0.36f), uiFace(600), p.fg, -0.01f, R)
-                    q.ch?.let { ch -> text(Live.pct(ch), W - pad, base + 5f, 11f, uiFace(600), if (ch >= 0) UP else DOWN, align = R) }
+                    text(v, W - pad - 74f, vb, fitText(v, 16f, W * 0.36f), uiFace(600), p.fg, -0.01f, R)
+                    q.ch?.let { ch -> text(Live.pct(ch), W - pad, vb, 11f, uiFace(600), if (ch >= 0) UP else DOWN, align = R) }
                 }
             }
         }
