@@ -36,7 +36,7 @@ jobs:
       - name: Render widget contact sheet
         continue-on-error: true
         run: |
-          gradle testDebugUnitTest --tests "com.phani.widgets.RenderSheetTest" --tests "com.phani.widgets.ScreensTest" --tests "com.phani.widgets.QuickTest" --no-daemon 2>&1 | grep -E "FAIL|Exception|Error|at com.phani|BUILD|tests completed" | head -40
+          gradle testDebugUnitTest --tests "com.phani.widgets.RenderSheetTest" --tests "com.phani.widgets.ScreensTest" --tests "com.phani.widgets.QuickTest" --tests "com.phani.widgets.StoreTest" --no-daemon 2>&1 | grep -E "FAIL|Exception|Error|at com.phani|BUILD|tests completed" | head -40
           ls -la app/build/sheet.png app/build/screens.png || true
           for f in app/build/test-results/testDebugUnitTest/*.xml; do
             if grep -q '<failure' "$f"; then
