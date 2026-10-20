@@ -126,7 +126,7 @@ object Rituals {
     fun focus(items: List<DayItem>): Pair<DayItem, Boolean>? {
         val now = LocalTime.now()
         items.lastOrNull { !it.done && !it.time.isAfter(now) }?.let { return it to true }
-        items.firstOrNull { it.time.isAfter(now) }?.let { return it to false }
+        items.firstOrNull { it.time.isAfter(now) && !it.done }?.let { return it to false }
         return null
     }
 

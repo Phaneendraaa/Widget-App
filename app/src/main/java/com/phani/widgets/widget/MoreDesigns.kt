@@ -182,15 +182,21 @@ object MoreDesigns {
                 label(title, pad, pad + 11.5f, W - 2 * pad - 50f)
                 small("$doneN/${items.size}", W - pad, pad + 11.5f, size = 11.5f, align = R)
                 val top = pad + 22f
-                val rh = min(if (conf.design == "tall") 34f else 28f, (H - pad - top) / max(1, items.size))
+                val rh = min(if (W < 220f) 38f else 28f, (H - pad - top) / max(1, items.size))
                 items.forEachIndexed { i, it ->
                     val y = top + rh * i
                     val focus = f?.first?.key == it.key
                     if (focus) rrect(pad - 6f, y + 1f, W - 2 * pad + 12f, rh - 2f, 10f, fill(a(if (f!!.second) 0.16f else 0.08f, p.acc)))
                     val base = y + rh / 2 + 4.5f
-                    text(hm(it.time), pad, base, 11.5f, monoFace(500), if (it.done) p.mut else p.fg)
-                    val nx = pad + if (D.h24) 46f else 62f
-                    text(it.name, nx, base, 13.5f, uiFace(if (focus) 600 else 500), if (it.done) p.mut else p.fg, maxW = W - pad - nx - 30f)
+                    if (W < 220f) {
+                        // narrow: the name, with its time underneath
+                        text(it.name, pad, base - 5f, 13f, uiFace(if (focus) 600 else 500), if (it.done) p.mut else p.fg, maxW = W - 2 * pad - 26f)
+                        text(hm(it.time), pad, base + 8f, 10.5f, monoFace(500), p.mut)
+                    } else {
+                        text(hm(it.time), pad, base, 11.5f, monoFace(500), if (it.done) p.mut else p.fg)
+                        val nx = pad + if (D.h24) 46f else 62f
+                        text(it.name, nx, base, 13.5f, uiFace(if (focus) 600 else 500), if (it.done) p.mut else p.fg, maxW = W - pad - nx - 30f)
+                    }
                     val cx = W - pad - 10f; val cy = y + rh / 2
                     if (it.done) { circle(cx, cy, 9f, fill(p.fg)); icon(Paths.check, cx, cy, 12f, p.bg or 0xFF000000.toInt(), 2.6f) }
                     else circle(cx, cy, 8.4f, stroke(a(if (focus && f!!.second) 1f else 0.4f, if (focus && f!!.second) p.acc else p.fg), 1.6f))
