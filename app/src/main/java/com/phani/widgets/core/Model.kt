@@ -102,6 +102,14 @@ class AppData(
     /** The last style-drop file downloaded, and when. */
     var drops: String? = null,
     var dropsAt: Long = 0L,
+    /** Prayers and medicines: your own timed items, and calculated prayer times (see [Rituals]). */
+    val rituals: MutableList<Ritual> = mutableListOf(),
+    val salahDone: MutableMap<String, MutableSet<String>> = mutableMapOf(),
+    var prayMode: String = "salah",
+    var prayMethod: String = "",
+    var asrHanafi: Boolean = false,
+    var remPray: Boolean = false,
+    var remMeds: Boolean = false,
 )
 
 /* ---------------- JSON ---------------- */
@@ -161,6 +169,7 @@ fun AppData.toJson(): JSONObject {
         .put("look", look).put("zoomPct", (zoom * 100).roundToInt())
     o.put("notes", JSONArray(notes.map { JSONObject().put("id", it.id).put("text", it.text) }))
     o.put("live", Live.write(this))
+    o.put("daily", Rituals.write(this))
     return o
 }
 
@@ -208,7 +217,7 @@ fun appDataFrom(o: JSONObject): AppData {
         remFast = o.optBoolean("remFast", false), remWater = o.optBoolean("remWater", false),
         look = o.optString("look", "paper"), zoom = (o.optInt("zoomPct", 80) / 100f).coerceIn(0.5f, 1.4f),
         notes = (o.optJSONArray("notes") ?: JSONArray()).objs().map { Note(it.getString("id"), it.getString("text")) }.toMutableList(),
-    ).also { Live.read(o.optJSONObject("live"), it) }
+    ).also { Live.read(o.optJSONObject("live"), it); Rituals.read(o.optJSONObject("daily"), it) }
 }
 
 /** A fresh start: nothing tracked, no widgets. */
@@ -323,4 +332,10 @@ private fun sampleLive(d: AppData, cur: String) {
         }
     }
     d.tempF = cur == "USD"
+    val t = today().toString()
+    d.rituals.add(Ritual("m1", "Vitamin D", "09:00", "med", "1 tablet with breakfast", mutableSetOf(t)))
+    d.rituals.add(Ritual("m2", "Iron", "14:00", "med", "", mutableSetOf()))
+    d.rituals.add(Ritual("m3", "Magnesium", "21:30", "med", "", mutableSetOf()))
+    d.prayMethod = Salah.defaultMethod(cur); d.asrHanafi = Salah.defaultHanafi(cur)
+    d.salahDone[t] = mutableSetOf("Fajr", "Dhuhr")
 }

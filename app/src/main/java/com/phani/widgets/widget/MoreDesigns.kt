@@ -27,6 +27,7 @@ object MoreDesigns {
         when (x.conf.type) {
             "protein" -> protein(x)
             "calm" -> calm(x)
+            "prayer", "meds" -> rituals(x)
             else -> return false
         }
         return true
@@ -152,6 +153,75 @@ object MoreDesigns {
                 small("of $goal min", W / 2, cy + 15f, size = 10f, align = C)
                 small(if (stk > 0) "$stk" else "", W - pad, pad + 11.5f, p.acc, 11.5f, R, weight = 600)
                 button(pad, btnY, W - 2 * pad, bh, "solid", "quick", text = "Begin")
+            }
+        }
+    }
+
+    /* ---------- Prayer and medicine ---------- */
+
+    private fun hm(t: java.time.LocalTime): String =
+        t.format(java.time.format.DateTimeFormatter.ofPattern(if (D.h24) "HH:mm" else "h:mm a", Locale.US)).lowercase()
+
+    private fun until(t: java.time.LocalTime): String {
+        val m = java.time.Duration.between(java.time.LocalTime.now(), t).toMinutes().toInt()
+        return when { m <= 0 -> "now"; m < 60 -> "in $m min"; else -> "in ${m / 60}h ${m % 60}m" }
+    }
+
+    private fun rituals(x: Ctx) = with(x) {
+        val med = conf.type == "meds"
+        val items = com.phani.widgets.core.Rituals.items(conf.type, D)
+        val title = ttl(if (med) "Medicine" else "Prayer")
+        if (items.isEmpty()) {
+            none(title, if (med) "Add a medicine" else if (D.prayMode == "salah" && D.place == null) "Pick your city" else "Add a prayer time"); return@with
+        }
+        val f = com.phani.widgets.core.Rituals.focus(items)
+        val doneN = items.count { it.done }
+        val doneWord = if (med) "Taken" else "Done"
+        when (conf.design) {
+            "list", "tall" -> {
+                label(title, pad, pad + 11.5f, W - 2 * pad - 50f)
+                small("$doneN/${items.size}", W - pad, pad + 11.5f, size = 11.5f, align = R)
+                val top = pad + 22f
+                val rh = min(if (conf.design == "tall") 34f else 28f, (H - pad - top) / max(1, items.size))
+                items.forEachIndexed { i, it ->
+                    val y = top + rh * i
+                    val focus = f?.first?.key == it.key
+                    if (focus) rrect(pad - 6f, y + 1f, W - 2 * pad + 12f, rh - 2f, 10f, fill(a(if (f!!.second) 0.16f else 0.08f, p.acc)))
+                    val base = y + rh / 2 + 4.5f
+                    text(hm(it.time), pad, base, 11.5f, monoFace(500), if (it.done) p.mut else p.fg)
+                    val nx = pad + if (D.h24) 46f else 62f
+                    text(it.name, nx, base, 13.5f, uiFace(if (focus) 600 else 500), if (it.done) p.mut else p.fg, maxW = W - pad - nx - 30f)
+                    val cx = W - pad - 10f; val cy = y + rh / 2
+                    if (it.done) { circle(cx, cy, 9f, fill(p.fg)); icon(Paths.check, cx, cy, 12f, p.bg or 0xFF000000.toInt(), 2.6f) }
+                    else circle(cx, cy, 8.4f, stroke(a(if (focus && f!!.second) 1f else 0.4f, if (focus && f!!.second) p.acc else p.fg), 1.6f))
+                    hitArea(pad - 6f, y, W - 2 * pad + 12f, rh, "rit", it.key)
+                }
+            }
+            else -> { // next
+                label(title, pad, pad + 11.5f, W - 2 * pad - 30f)
+                small("$doneN/${items.size}", W - pad, pad + 11.5f, size = 11.5f, align = R)
+                val bh = min(32f, H * 0.2f); val btnY = H - pad - bh
+                if (f == null) {
+                    text("All done today", pad, pad + 44f, 16f, uiFace(600), p.fg, maxW = W - 2 * pad)
+                    small(if (med) "Every dose taken" else "Every prayer marked", pad, pad + 61f, size = 11.5f, maxW = W - 2 * pad)
+                } else {
+                    val (it, due) = f
+                    text(it.name, pad, pad + 44f, 18f, uiFace(600), p.fg, maxW = W - 2 * pad)
+                    val tm = hm(it.time)
+                    val sz = min(26f, (W - 2 * pad) / max(1f, numW(tm, 26f) / 26f))
+                    num(tm, pad, pad + 48f + cap(sz) + 6f, sz, if (due) p.acc else p.fg)
+                    small(if (due) "Due now" else until(it.time), pad, pad + 48f + cap(sz) + 22f, if (due) p.acc else p.mut, 11.5f, maxW = W - 2 * pad, weight = if (due) 600 else 400)
+                    if (due) button(pad, btnY, W - 2 * pad, bh, "solid", "rit", it.key, text = doneWord)
+                }
+                if (f == null || !f.second) {
+                    // today's items as dots
+                    val n = items.size; val gap = 6f
+                    val dw = min(12f, (W - 2 * pad - gap * (n - 1)) / n)
+                    items.forEachIndexed { i, itx ->
+                        val cx = pad + dw / 2 + i * (dw + gap); val cy = btnY + bh / 2
+                        if (itx.done) circle(cx, cy, dw / 2, fill(p.fg)) else circle(cx, cy, dw / 2 - 0.8f, stroke(a(0.4f, p.fg), 1.4f))
+                    }
+                }
             }
         }
     }

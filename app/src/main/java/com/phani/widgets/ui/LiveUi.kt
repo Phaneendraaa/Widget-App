@@ -163,3 +163,95 @@ fun RatesField() {
             style = T.small.copy(fontSize = 12.sp), color = p.muted)
     }
 }
+
+/* ---------------- Prayer and medicine ---------------- */
+
+@Composable
+fun PrayerField() {
+    AppStore.rev
+    val p = pal()
+    val d = AppStore.data
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Seg(listOf("salah" to "Salah times", "custom" to "My own times"), d.prayMode) { v -> AppStore.change { prayMode = v } }
+        if (d.prayMode == "salah") {
+            Text("Worked out on your phone for your city, every day.", style = T.small, color = p.muted)
+            PlaceField()
+            FieldLabel("Method")
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val cur = d.prayMethod.ifBlank { com.phani.widgets.core.Salah.defaultMethod(d.cur) }
+                com.phani.widgets.core.Salah.METHODS.forEach { m ->
+                    val on = m.id == cur
+                    Box(Modifier.clip(RoundedCornerShape(18.dp)).background(if (on) p.ink else p.card).clickable { AppStore.change { prayMethod = m.id } }
+                        .padding(horizontal = 14.dp, vertical = 9.dp)) { Text(m.name, style = T.smallB, color = if (on) p.paper else p.ink) }
+                }
+            }
+            FieldLabel("Asr")
+            Seg(listOf(false to "Standard", true to "Hanafi"), d.asrHanafi) { v -> AppStore.change { asrHanafi = v } }
+            val pl = d.place
+            if (pl != null) com.phani.widgets.core.Salah.times(com.phani.widgets.core.today(), pl.lat, pl.lon, d.prayMethod.ifBlank { com.phani.widgets.core.Salah.defaultMethod(d.cur) }, d.asrHanafi)?.let { t ->
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Today in ${pl.name}", style = T.smallB, color = p.ink)
+                    t.forEach { (n, tm) ->
+                        Row(Modifier.fillMaxWidth()) {
+                            Text(n, style = T.small, color = if (n == "Sunrise") p.muted else p.ink, modifier = Modifier.weight(1f))
+                            Text(tm.format(java.time.format.DateTimeFormatter.ofPattern(if (d.h24) "HH:mm" else "h:mm a")), style = T.smallB, color = p.ink)
+                        }
+                    }
+                }
+            }
+            Text("Times can differ by a few minutes from your local mosque.", style = T.small.copy(fontSize = 12.sp), color = p.muted)
+        } else {
+            Text("Any prayer, puja, aarti or quiet time, at the times you choose.", style = T.small, color = p.muted)
+            RitualList("prayer", "Morning puja")
+        }
+        RemindToggle("pray", "Remind me at each time", "A notification when it's time, with a Done button")
+    }
+}
+
+@Composable
+fun MedsField() {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        RitualList("med", "Vitamin D")
+        RemindToggle("meds", "Remind me when each is due", "A notification at each time, with a Taken button")
+        Text("A reminder helps you remember. It isn't medical advice; follow your doctor's instructions.", style = T.small.copy(fontSize = 12.sp), color = pal().muted)
+    }
+}
+
+/** Your own timed items: a name and a time each, added and removed in place. */
+@Composable
+fun RitualList(kind: String, hint: String) {
+    AppStore.rev
+    val p = pal()
+    val ctx = LocalContext.current
+    val list = AppStore.data.rituals.filter { it.kind == kind }.sortedBy { it.time }
+    list.forEach { r ->
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(r.name, style = T.smallB, color = p.ink)
+                if (r.note.isNotBlank()) Text(r.note, style = T.small.copy(fontSize = 12.sp), color = p.muted)
+            }
+            Box(Modifier.width(118.dp)) { TimeField("", r.time) { v -> AppStore.change { r.time = v }; com.phani.widgets.widget.Reminders.schedule(ctx) } }
+            Box(Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).clickable { AppStore.change { rituals.remove(r) } }, contentAlignment = Alignment.Center) {
+                Icon(Ic.x, "Remove", tint = p.muted, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+    var name by remember(kind) { mutableStateOf("") }
+    var time by remember(kind) { mutableStateOf(if (kind == "med") "09:00" else "06:00") }
+    var note by remember(kind) { mutableStateOf("") }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(if (list.isEmpty()) "Add your first" else "Add another", style = T.bodyB, color = p.ink)
+        Field(if (kind == "med") "Medicine" else "Name", name, { name = it.take(30) }, hint)
+        if (kind == "med") Field("Dose (optional)", note, { note = it.take(40) }, "1 tablet with food")
+        TimeField("Time", time) { time = it }
+        BigButton("Add", kind = if (name.isBlank()) "ghost" else "solid") {
+            if (name.isNotBlank()) {
+                AppStore.change { rituals.add(com.phani.widgets.core.Ritual(com.phani.widgets.core.uid(), name.trim(), time, kind, note.trim(), mutableSetOf())) }
+                com.phani.widgets.widget.Reminders.schedule(ctx)
+                name = ""; note = ""
+            }
+        }
+        if (kind == "med") Text("Twice a day? Add it twice, with each time.", style = T.small.copy(fontSize = 12.sp), color = p.muted)
+    }
+}

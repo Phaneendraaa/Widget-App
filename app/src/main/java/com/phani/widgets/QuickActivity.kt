@@ -80,7 +80,7 @@ class QuickActivity : ComponentActivity() {
         /** Widget types whose body tap opens this panel. */
         fun kindFor(type: String): String? = when (type) {
             "spend" -> "spend"; "fast" -> "fast"; "counter" -> "counter"; "streak" -> "habit"; "pace" -> "goal"
-            "protein" -> "protein"; "calm" -> "calm"
+            "protein" -> "protein"; "calm" -> "calm"; "prayer", "meds" -> "rituals"
             "countdown", "subs", "attendance", "next", "year", "today", "moon" -> "stats"
             else -> null
         }
@@ -121,6 +121,7 @@ class QuickActivity : ComponentActivity() {
                             "goal" -> GoalPanel(ref, cid)
                             "protein" -> ProteinPanel(ref, cid)
                             "calm" -> CalmPanel(ref, cid)
+                            "rituals" -> RitualPanel(cid)
                             "stats" -> StatsPanel(cid)
                             else -> finish()
                         }
@@ -413,6 +414,29 @@ class QuickActivity : ComponentActivity() {
         } else {
             BigButton("End now", kind = "ghost") { log(elapsed) }
         }
+    }
+
+    @Composable
+    private fun ColumnScope.RitualPanel(cid: String?) {
+        AppStore.rev
+        val p = pal()
+        val conf = AppStore.data.placed.firstOrNull { it.id == cid }
+        val type = conf?.type ?: "prayer"
+        val items = com.phani.widgets.core.Rituals.items(type, AppStore.data)
+        val med = type == "meds"
+        Header(if (med) "Medicine" else "Prayer", "Today · ${items.count { it.done }} of ${items.size} " + if (med) "taken" else "done")
+        items.forEach { it ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).clickable { commit(cid) { com.phani.widgets.core.Rituals.toggle(this, it.key) } }
+                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(it.name, style = T.bodyB, color = p.ink)
+                    Text(it.time.format(java.time.format.DateTimeFormatter.ofPattern(if (AppStore.data.h24) "HH:mm" else "h:mm a")) + if (it.note.isNotBlank()) " · " + it.note else "",
+                        style = T.small, color = p.muted)
+                }
+                Toggle(it.done)
+            }
+        }
+        BigButton("Done", kind = "ghost") { finish() }
     }
 
     private fun Modifier.androidx_scale(s: Float) = this.then(Modifier.graphicsLayer(scaleX = s, scaleY = s))

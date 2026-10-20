@@ -96,6 +96,7 @@ object Create {
             else -> null
         }
         madeRef = ref
+        if (type == "prayer" && AppStore.data.prayMethod.isBlank()) AppStore.change { prayMethod = com.phani.widgets.core.Salah.defaultMethod(cur); asrHanafi = com.phani.widgets.core.Salah.defaultHanafi(cur) }
         if (type == "rates" && AppStore.data.rates.isEmpty()) AppStore.change { rates.addAll(com.phani.widgets.core.Live.defaultRates(cur)) }
         conf = WConf(uid(), type, d.id, d.size, ref = ref, theme = theme ?: com.phani.widgets.widget.Themes.APP)
         this.bindId = bindId; editing = false; adding = false; open = true
@@ -332,6 +333,8 @@ fun typeBlurb(type: String) = when (type) {
     "aqi" -> "Is the air good today?"
     "rates" -> "Currency, gold and crypto"
     "protein" -> "Grams today against your goal"
+    "prayer" -> "Next prayer, with a reminder"
+    "meds" -> "Doses for today, tap Taken"
     "calm" -> "Breathe, then keep the streak"
     else -> ""
 }
@@ -353,6 +356,8 @@ private fun infoOk(c: WConf): Boolean {
         "attendance" -> d.subjects.isNotEmpty()
         "weather", "aqi" -> d.place != null
         "rates" -> d.rates.isNotEmpty()
+        "prayer" -> com.phani.widgets.core.Rituals.prayers(d).isNotEmpty()
+        "meds" -> com.phani.widgets.core.Rituals.meds(d).isNotEmpty()
         else -> true
     }
 }
@@ -376,6 +381,8 @@ private fun infoQuestion(c: WConf) = when (c.type) {
     "weather", "aqi" -> "Which city?"
     "rates" -> "What do you want to follow?"
     "protein" -> "Your daily protein goal"
+    "prayer" -> "Your prayer times"
+    "meds" -> "Your medicines"
     "calm" -> "Minutes a day"
     else -> "Your details"
 }
@@ -398,6 +405,8 @@ private fun infoSub(c: WConf): String? = when (c.type) {
     "aqi" -> "On the US AQI scale: green is good, red means limit time outside."
     "rates" -> "The first one is shown on the small and wide sizes."
     "protein" -> "Tap +20 on the widget, or + for any amount. It starts fresh every day."
+    "prayer" -> "Tap a prayer on the widget to mark it done."
+    "meds" -> "When a dose is due, the widget shows a Taken button."
     "calm" -> "Tap Begin on the widget for a guided breathing session. Your minutes count toward today."
     else -> null
 }
@@ -423,6 +432,8 @@ private fun InfoFields(c: WConf) {
             "aqi" -> PlaceField()
             "rates" -> RatesField()
             "protein", "calm" -> GoalField(c)
+            "prayer" -> PrayerField()
+            "meds" -> MedsField()
         }
         // how it's going, once the widget is saved (a new one has nothing to show yet)
         if (AppStore.data.placed.any { it.id == c.id }) StatsCard(c)
@@ -439,6 +450,8 @@ private fun hint(c: WConf) = when (c.type) {
     "attendance" -> "Add a class above"
     "weather", "aqi" -> "Pick a city above"
     "rates" -> "Add a rate above"
+    "prayer" -> if (AppStore.data.prayMode == "salah") "Pick your city above" else "Add a prayer time above"
+    "meds" -> "Add a medicine above"
     else -> "Give it a name above"
 }
 

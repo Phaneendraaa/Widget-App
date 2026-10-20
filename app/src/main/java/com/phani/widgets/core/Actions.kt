@@ -61,6 +61,13 @@ object Actions {
                 val a = pace(g).ahead.roundToInt()
                 return ActResult("${g.name}: ${Fmt.trimNum(g.done)}/${Fmt.trimNum(g.target)} · " + if (a <= -1) "${-a}d behind" else if (a >= 1) "${a}d ahead" else "on track")
             }
+            "rit" -> {
+                val key = id ?: return ActResult(null)
+                val name = if (key.startsWith("salah:")) key.removePrefix("salah:") else d.rituals.firstOrNull { it.id == key }?.name ?: return ActResult(null)
+                AppStore.change(true) { Rituals.toggle(this, key) }
+                val med = d.rituals.firstOrNull { it.id == key }?.kind == "med"
+                return ActResult("$name " + if (med) "taken" else "done")
+            }
             "att-p", "att-a" -> {
                 val s = subjectBy(id) ?: return ActResult(null)
                 AppStore.change(true) { s.t++; if (act == "att-p") s.a++ }

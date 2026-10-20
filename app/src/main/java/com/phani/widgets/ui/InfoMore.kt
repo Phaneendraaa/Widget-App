@@ -321,9 +321,9 @@ internal fun RemindToggle(kind: String, title: String, sub: String) {
     AppStore.rev
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val d = AppStore.data
-    val on = when (kind) { "habit" -> d.remHabit; "subs" -> d.remSubs; "fast" -> d.remFast; else -> d.remWater }
+    val on = when (kind) { "habit" -> d.remHabit; "subs" -> d.remSubs; "fast" -> d.remFast; "pray" -> d.remPray; "meds" -> d.remMeds; else -> d.remWater }
     val set: (Boolean) -> Unit = { v ->
-        AppStore.change { when (kind) { "habit" -> remHabit = v; "subs" -> remSubs = v; "fast" -> remFast = v; else -> remWater = v } }
+        AppStore.change { when (kind) { "habit" -> remHabit = v; "subs" -> remSubs = v; "fast" -> remFast = v; "pray" -> remPray = v; "meds" -> remMeds = v; else -> remWater = v } }
         com.phani.widgets.widget.Reminders.schedule(ctx)
     }
     val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->

@@ -170,8 +170,8 @@ private val NEEDS = listOf(
     Need("Your money", "What's safe to spend, and what renews next", listOf("spend", "subs")),
     Need("Finance", "Exchange rates, gold and crypto, live", listOf("rates")),
     Need("Habits & goals", "Streaks you keep, goals with a deadline", listOf("streak", "pace")),
-    Need("Health", "Water, protein, fasting, anything you count", listOf("counter", "protein", "fast")),
-    Need("Mind & faith", "Breathe, meditate, keep a calm streak", listOf("calm")),
+    Need("Health", "Water, protein, medicine, fasting", listOf("counter", "protein", "meds", "fast")),
+    Need("Mind & faith", "Meditate, breathe, and pray on time", listOf("calm", "prayer")),
     Need("Time & date", "Today, world clocks, the year, the moon", listOf("today", "clock", "year", "moon")),
     Need("Your day", "What needs you, what's next, classes, notes", listOf("now", "next", "attendance", "note")),
 )

@@ -42,6 +42,7 @@ object Reminders {
         set(2, "subs", if (d.remSubs) nextAt("10:00") else null)
         set(3, "fast", if (d.remFast && d.fast.start != null) (d.fast.start!! + d.fast.target * 3_600_000L).takeIf { it > System.currentTimeMillis() } else null)
         set(4, "water", if (d.remWater) nextWater() else null)
+        set(5, "ritual", if (d.remPray || d.remMeds) com.phani.widgets.core.Rituals.nextReminder(d) else null)
     }
 
     /** The next time today or tomorrow at hh:mm. */
@@ -95,6 +96,13 @@ object Reminders {
             "fast" -> if (d.fast.start != null) {
                 val end = PendingIntent.getActivity(ctx, 400, QuickActivity.intent(ctx, "fast", null, null), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                 post(ctx, 30, "${d.fast.target}h fast done", "Nice work. End it now or keep going.", "End fast" to end)
+            }
+            "ritual" -> com.phani.widgets.core.Rituals.dueNow(d).take(3).forEachIndexed { i, (kind, it) ->
+                val med = kind == "meds"
+                val done = PendingIntent.getBroadcast(ctx, 600 + i, Intent(ctx, CountdownWidgetReceiver).setAction(ACT_TAP)
+                    .putExtra("act", "rit").putExtra("id", it.key).putExtra("notif", 60 + i), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                post(ctx, 60 + i, "Time for ${it.name}", if (med) it.note.ifBlank { "Tap Taken once you've had it." } else "It's ${it.name} time.",
+                    (if (med) "Taken" else "Done") to done)
             }
             "water" -> d.counters.firstOrNull { c -> d.placed.any { it.type == "counter" && it.ref == c.id } }?.let { c ->
                 val v = cnt(c)
