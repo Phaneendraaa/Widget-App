@@ -50,6 +50,10 @@ object Catalog {
         TypeDef("moon", "Moon", "time", "Tonight's moon phase and when the next full moon is.",
             listOf(DesignDef("moon", "Moon", "s"), DesignDef("phase", "Phase", "w"),
                 DesignDef("night", "Night sky", "s", sig = true), DesignDef("nighttall", "Tall night sky", "t", sig = true))),
+        TypeDef("protein", "Protein", "health", "Grams of protein today against your goal. Add 20 with one tap, or any amount.",
+            listOf(DesignDef("ring", "Ring", "s"), DesignDef("bar", "Bar", "w"), DesignDef("column", "Column", "t")), isNew = true),
+        TypeDef("calm", "Meditation", "mind", "A few minutes of calm. Tap Begin, breathe with the circle, and your minutes and streak are kept.",
+            listOf(DesignDef("breathe", "Breathe", "s", sig = true), DesignDef("strip", "Week", "w"), DesignDef("tall", "Tall breathe", "t", sig = true)), isNew = true),
         TypeDef("weather", "Weather", "outside", "The weather in your city: now, the next hours and the week. Updates every half hour.",
             listOf(DesignDef("sky", "Sky", "s", sig = true), DesignDef("skyhours", "Sky and hours", "m", sig = true),
                 DesignDef("now", "Now", "s"), DesignDef("hours", "Next hours", "w"), DesignDef("week", "Week", "m"), DesignDef("skytall", "Tall sky", "t", sig = true)), isNew = true),
@@ -68,7 +72,7 @@ object Catalog {
     val totalDesigns get() = types.sumOf { it.designs.size }
 
     /** The widgets offered in this version, in the order they're shown. The rest stay in code for later updates. */
-    val launch = listOf("countdown", "weather", "aqi", "streak", "spend", "subs", "rates", "counter", "clock", "fast", "pace", "year", "today", "moon", "note", "next", "attendance", "now")
+    val launch = listOf("countdown", "weather", "aqi", "streak", "spend", "subs", "rates", "counter", "protein", "calm", "clock", "fast", "pace", "year", "today", "moon", "note", "next", "attendance", "now")
     val visible get() = launch.map { type(it) }
 
     val sizeName = mapOf("s" to "Small", "t" to "Tall", "w" to "Wide", "m" to "Large")
@@ -81,7 +85,9 @@ object Catalog {
             "countdown" -> d.dates.firstOrNull()?.id
             "pace" -> d.goals.firstOrNull()?.id
             "streak" -> d.habits.firstOrNull()?.id
-            "counter" -> d.counters.firstOrNull()?.id
+            "counter" -> d.counters.firstOrNull { it.unit != "g" && it.unit != "min" }?.id
+            "protein" -> d.counters.firstOrNull { it.unit == "g" }?.id
+            "calm" -> d.counters.firstOrNull { it.unit == "min" }?.id
             "note" -> d.notes.firstOrNull()?.id
             else -> null
         }

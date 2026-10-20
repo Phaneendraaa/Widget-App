@@ -216,6 +216,15 @@ fun fastState(): FastState {
 
 fun cnt(c: Counter): Int = c.log[today().toString()] ?: 0
 
+/** Days in a row with some meditation, counting today or yesterday as the latest. */
+fun calmStreak(c: Counter): Int {
+    var d = today()
+    if ((c.log[d.toString()] ?: 0) <= 0) d = d.minusDays(1)
+    var n = 0
+    while ((c.log[d.toString()] ?: 0) > 0 && n < 2000) { n++; d = d.minusDays(1) }
+    return n
+}
+
 /* ---------------- time zones ---------------- */
 
 class TzNow(val h: Int, val m: Int, val wd: String)

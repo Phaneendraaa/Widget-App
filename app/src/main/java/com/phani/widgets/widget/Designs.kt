@@ -47,6 +47,7 @@ object Designs {
         if (Signature.draw(x)) return
         if (LiveDesigns.draw(x)) return
         if (TallDesigns.draw(x)) return
+        if (MoreDesigns.draw(x)) return
         when (x.conf.type) {
             "now" -> now(x)
             "spend" -> spend(x)

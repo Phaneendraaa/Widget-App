@@ -170,7 +170,8 @@ private val NEEDS = listOf(
     Need("Your money", "What's safe to spend, and what renews next", listOf("spend", "subs")),
     Need("Finance", "Exchange rates, gold and crypto, live", listOf("rates")),
     Need("Habits & goals", "Streaks you keep, goals with a deadline", listOf("streak", "pace")),
-    Need("Health", "Water, fasting, anything you count", listOf("counter", "fast")),
+    Need("Health", "Water, protein, fasting, anything you count", listOf("counter", "protein", "fast")),
+    Need("Mind & faith", "Breathe, meditate, keep a calm streak", listOf("calm")),
     Need("Time & date", "Today, world clocks, the year, the moon", listOf("today", "clock", "year", "moon")),
     Need("Your day", "What needs you, what's next, classes, notes", listOf("now", "next", "attendance", "note")),
 )
@@ -340,6 +341,7 @@ private fun WidgetCard(c: WConf) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
             WidgetView(c, Modifier.widthIn(max = com.phani.widgets.widget.baseWidth(c.size).dp), live = true, onTap = { Create.startEdit(c) }) { h ->
                 if (h.act == "spend-open" || h.act == "fast") ctx.startActivity(com.phani.widgets.QuickActivity.intent(ctx, if (h.act == "fast") "fast" else "spend", c.ref, c.id))
+                else if (h.act == "quick") com.phani.widgets.QuickActivity.kindFor(c.type)?.let { ctx.startActivity(com.phani.widgets.QuickActivity.intent(ctx, it, c.ref, c.id)) }
                 else runHit(h, c.id)
             }
         }

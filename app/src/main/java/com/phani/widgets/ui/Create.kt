@@ -89,6 +89,8 @@ object Create {
             "countdown" -> if (d.id == "stack") null else uid().also { id -> AppStore.change { dates.add(DateItem(id, "", today().plusDays(30).toString(), false)) } }
             "streak" -> uid().also { id -> AppStore.change { habits.add(Habit(id, "", 0, 1, mutableSetOf(), mutableSetOf())) } }
             "counter" -> uid().also { id -> AppStore.change { counters.add(Counter(id, "", "glasses", 8, mutableMapOf())) } }
+            "protein" -> AppStore.data.counters.firstOrNull { it.unit == "g" }?.id ?: uid().also { id -> AppStore.change { counters.add(Counter(id, "Protein", "g", 120, mutableMapOf())) } }
+            "calm" -> AppStore.data.counters.firstOrNull { it.unit == "min" }?.id ?: uid().also { id -> AppStore.change { counters.add(Counter(id, "Meditation", "min", 10, mutableMapOf())) } }
             "pace" -> uid().also { id -> AppStore.change { goals.add(Goal(id, "", "pages", 100.0, 0.0, today().toString(), today().plusDays(30).toString(), 5.0)) } }
             "note" -> uid().also { id -> AppStore.change { notes.add(Note(id, "")) } }
             else -> null
@@ -329,6 +331,8 @@ fun typeBlurb(type: String) = when (type) {
     "weather" -> "Now, the next hours, the week"
     "aqi" -> "Is the air good today?"
     "rates" -> "Currency, gold and crypto"
+    "protein" -> "Grams today against your goal"
+    "calm" -> "Breathe, then keep the streak"
     else -> ""
 }
 
@@ -371,6 +375,8 @@ private fun infoQuestion(c: WConf) = when (c.type) {
     "now" -> "Nothing to fill in"
     "weather", "aqi" -> "Which city?"
     "rates" -> "What do you want to follow?"
+    "protein" -> "Your daily protein goal"
+    "calm" -> "Minutes a day"
     else -> "Your details"
 }
 
@@ -391,6 +397,8 @@ private fun infoSub(c: WConf): String? = when (c.type) {
     "weather" -> "It updates about every half hour, and shows the time since if it can't."
     "aqi" -> "On the US AQI scale: green is good, red means limit time outside."
     "rates" -> "The first one is shown on the small and wide sizes."
+    "protein" -> "Tap +20 on the widget, or + for any amount. It starts fresh every day."
+    "calm" -> "Tap Begin on the widget for a guided breathing session. Your minutes count toward today."
     else -> null
 }
 
@@ -414,6 +422,7 @@ private fun InfoFields(c: WConf) {
             "weather" -> { PlaceField(); TempUnitField() }
             "aqi" -> PlaceField()
             "rates" -> RatesField()
+            "protein", "calm" -> GoalField(c)
         }
         // how it's going, once the widget is saved (a new one has nothing to show yet)
         if (AppStore.data.placed.any { it.id == c.id }) StatsCard(c)
@@ -441,7 +450,7 @@ private fun existing(c: WConf): List<Pair<String, String>> {
     val l = when (c.type) {
         "countdown" -> d.dates.map { it.id to it.name }
         "streak" -> d.habits.map { it.id to it.name }
-        "counter" -> d.counters.map { it.id to it.name }
+        "counter" -> d.counters.filter { it.unit != "g" && it.unit != "min" }.map { it.id to it.name }
         "pace" -> d.goals.map { it.id to it.name }
         "note" -> d.notes.map { it.id to it.text.lineSequence().first().take(24) }
         else -> emptyList()
@@ -473,6 +482,19 @@ internal fun SameName(c: WConf, name: String) {
         Spacer(Modifier.width(8.dp))
         Chip("Use it", true) { Create.useExisting(hit.first) }
     }
+}
+
+@Composable
+private fun GoalField(c: WConf) {
+    AppStore.rev
+    val ct = AppStore.data.counters.firstOrNull { it.id == c.ref } ?: return
+    val opts = if (c.type == "protein") listOf(60, 80, 100, 120, 150, 180) else listOf(5, 10, 15, 20, 30)
+    FieldLabel(if (c.type == "protein") "Goal a day" else "Minutes a day")
+    Seg(opts.map { it to (if (c.type == "protein") "${it}g" else "$it") }, ct.goal) { v -> AppStore.change { ct.goal = v } }
+    var raw by remember(ct.id) { mutableStateOf(if (ct.goal in opts) "" else ct.goal.toString()) }
+    Field("Or type your own", raw, { t -> raw = t.filter { it.isDigit() }.take(4); raw.toIntOrNull()?.takeIf { it > 0 }?.let { v -> AppStore.change { ct.goal = v } } },
+        if (c.type == "protein") "e.g. 140" else "e.g. 25", androidx.compose.ui.text.input.KeyboardType.Number)
+    if (c.type == "protein") Text("A common target is about 1.6 g for every kg you weigh, if you train. Ask a doctor if unsure.", style = T.small, color = pal().muted)
 }
 
 @Composable

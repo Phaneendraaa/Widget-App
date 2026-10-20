@@ -22,8 +22,9 @@ object Actions {
             "cnt-" -> {
                 val c = d.counters.firstOrNull { it.id == id } ?: return ActResult(null)
                 if ((c.log[k] ?: 0) <= 0) return ActResult(null, false)
-                AppStore.change(true) { c.log[k] = maxOf(0, (c.log[k] ?: 0) - 1) }
-                return ActResult("${c.name}: ${c.log[k]} of ${c.goal}")
+                val n = value?.toIntOrNull() ?: 1
+                AppStore.change(true) { c.log[k] = maxOf(0, (c.log[k] ?: 0) - n) }
+                return ActResult("${c.name}: ${c.log[k]} of ${c.goal}${if (c.unit == "g") "g" else ""}")
             }
             "fast" -> {
                 return if (d.fast.start != null) {
@@ -37,8 +38,9 @@ object Actions {
             }
             "cnt" -> {
                 val c = d.counters.firstOrNull { it.id == id } ?: return ActResult(null)
-                AppStore.change(true) { c.log[k] = (c.log[k] ?: 0) + 1 }
-                return ActResult("${c.name}: ${c.log[k]} of ${c.goal}")
+                val n = value?.toIntOrNull() ?: 1
+                AppStore.change(true) { c.log[k] = (c.log[k] ?: 0) + n }
+                return ActResult("${c.name}: ${c.log[k]} of ${c.goal}${if (c.unit == "g") "g" else ""}")
             }
             "hab" -> {
                 val h = d.habits.firstOrNull { it.id == id } ?: return ActResult(null)

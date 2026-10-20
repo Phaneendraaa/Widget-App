@@ -400,6 +400,7 @@ internal fun StatsCard(c: com.phani.widgets.core.WConf) {
         "attendance" -> d.subjects.isNotEmpty()
         "next" -> d.sched.values.any { it.isNotEmpty() }
         "year", "today", "moon" -> true
+        "protein", "calm" -> d.counters.firstOrNull { it.id == c.ref }?.log?.isNotEmpty() == true
         else -> false
     }
     if (!has) return
@@ -407,7 +408,7 @@ internal fun StatsCard(c: com.phani.widgets.core.WConf) {
         Text("How it's going", style = T.bodyB, color = p.ink)
         when (c.type) {
             "spend" -> SpendStats(days7)
-            "counter" -> d.counters.firstOrNull { it.id == c.ref }?.let { CounterStats(it, days7) }
+            "counter", "protein", "calm" -> d.counters.firstOrNull { it.id == c.ref }?.let { CounterStats(it, days7) }
             "streak" -> d.habits.firstOrNull { it.id == c.ref }?.let { HabitStats(it) }
             "fast" -> FastStats(days7)
             "countdown" -> CountdownStats(c)

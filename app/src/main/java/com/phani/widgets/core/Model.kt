@@ -273,6 +273,8 @@ fun sampleData(cur: String): AppData {
         counters = mutableListOf(
             Counter("c1", "Water", "glasses", 8, mutableMapOf(d(0) to 5)),
             Counter("c2", "Coffee", "cups", 3, mutableMapOf(d(0) to 2)),
+            Counter("cp", "Protein", "g", 120, mutableMapOf(d(0) to 84, d(-1) to 126, d(-2) to 98)),
+            Counter("cm", "Meditation", "min", 10, mutableMapOf(d(0) to 6, d(-1) to 10, d(-2) to 12, d(-3) to 5, d(-5) to 10)),
         ),
         clocks = mutableListOf(WClock("k1", "New York", "America/New_York"), WClock("k2", "London", "Europe/London"), WClock("k3", "Tokyo", "Asia/Tokyo")),
         subjects = mutableListOf(

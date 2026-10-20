@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -79,6 +80,7 @@ class QuickActivity : ComponentActivity() {
         /** Widget types whose body tap opens this panel. */
         fun kindFor(type: String): String? = when (type) {
             "spend" -> "spend"; "fast" -> "fast"; "counter" -> "counter"; "streak" -> "habit"; "pace" -> "goal"
+            "protein" -> "protein"; "calm" -> "calm"
             "countdown", "subs", "attendance", "next", "year", "today", "moon" -> "stats"
             else -> null
         }
@@ -117,6 +119,8 @@ class QuickActivity : ComponentActivity() {
                             "counter" -> CounterPanel(ref, cid)
                             "habit" -> HabitPanel(ref, cid)
                             "goal" -> GoalPanel(ref, cid)
+                            "protein" -> ProteinPanel(ref, cid)
+                            "calm" -> CalmPanel(ref, cid)
                             "stats" -> StatsPanel(cid)
                             else -> finish()
                         }
@@ -311,6 +315,107 @@ class QuickActivity : ComponentActivity() {
             Text(t, style = T.h1.copy(fontSize = 34.sp), color = if (solid) p.paper else p.ink)
         }
     }
+
+    /* ---------- Protein: any amount ---------- */
+
+    @Composable
+    private fun ColumnScope.ProteinPanel(ref: String?, cid: String?) {
+        AppStore.rev
+        val p = pal()
+        val c = AppStore.data.counters.firstOrNull { it.id == ref } ?: AppStore.data.counters.firstOrNull { it.unit == "g" } ?: run { finish(); return }
+        val v = cnt(c)
+        val k = today().toString()
+        Header(c.name, "Today · goal ${c.goal} g")
+        Text("${v} g", style = T.h1.copy(fontSize = 56.sp, lineHeight = 58.sp), color = if (v >= c.goal) com.phani.widgets.ui.Signal else p.ink,
+            textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(if (v >= c.goal) "Goal reached" else "${c.goal - v} g to go", style = T.body, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        listOf(listOf(5, 10, 15, 20), listOf(25, 30, 40, 50)).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { g ->
+                    Box(Modifier.weight(1f).height(52.dp).clip(RoundedCornerShape(16.dp)).background(p.card).clickable { commit(cid) { c.log[k] = (c.log[k] ?: 0) + g } },
+                        contentAlignment = Alignment.Center) { Text("+$g g", style = T.bodyB, color = p.ink) }
+                }
+            }
+        }
+        var raw by remember { mutableStateOf("") }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) {
+                com.phani.widgets.ui.Field("Any amount (g)", raw, { t -> raw = t.filter { it.isDigit() }.take(3) }, "e.g. 32", androidx.compose.ui.text.input.KeyboardType.Number)
+            }
+        }
+        BigButton(if (raw.toIntOrNull() != null) "Add ${raw} g" else "Done", kind = if (raw.toIntOrNull() != null) "solid" else "ghost") {
+            val g = raw.toIntOrNull()
+            if (g != null && g > 0) { commit(cid) { c.log[k] = (c.log[k] ?: 0) + g }; raw = "" } else finish()
+        }
+        if (v > 0) Text("Remove 10 g", style = T.smallB, color = p.muted, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { commit(cid) { c.log[k] = maxOf(0, v - 10) } }.padding(8.dp))
+    }
+
+    /* ---------- Meditation: a guided breathing session ---------- */
+
+    @Composable
+    private fun ColumnScope.CalmPanel(ref: String?, cid: String?) {
+        AppStore.rev
+        val p = pal()
+        val c = AppStore.data.counters.firstOrNull { it.id == ref } ?: AppStore.data.counters.firstOrNull { it.unit == "min" } ?: run { finish(); return }
+        var mins by remember { mutableStateOf(5) }
+        var running by remember { mutableStateOf(false) }
+        var startAt by remember { mutableStateOf(0L) }
+        var elapsed by remember { mutableStateOf(0L) }
+        var finished by remember { mutableStateOf<Int?>(null) }
+        val k = today().toString()
+        fun log(ms: Long) {
+            val m = ((ms + 30_000) / 60_000).toInt()
+            if (m > 0) commit(cid) { c.log[k] = (c.log[k] ?: 0) + m }
+            finished = m; running = false
+        }
+        if (running) androidx.compose.runtime.LaunchedEffect(startAt) {
+            while (true) {
+                elapsed = System.currentTimeMillis() - startAt
+                if (elapsed >= mins * 60_000L) { log(mins * 60_000L); break }
+                kotlinx.coroutines.delay(200)
+            }
+        }
+        val streak = com.phani.widgets.core.calmStreak(c)
+        Header(c.name, "Today ${cnt(c)} of ${c.goal} min" + if (streak > 0) " · $streak-day streak" else "")
+        // the breathing circle: in 4 · hold 4 · out 4 · hold 4
+        val cyc = (elapsed % 16_000L).toFloat()
+        val (phase, scale) = when {
+            !running -> "Ready" to 0.7f
+            cyc < 4000 -> "Breathe in" to (0.55f + 0.45f * cyc / 4000f)
+            cyc < 8000 -> "Hold" to 1f
+            cyc < 12000 -> "Breathe out" to (1f - 0.45f * (cyc - 8000f) / 4000f)
+            else -> "Hold" to 0.55f
+        }
+        val sc by androidx.compose.animation.core.animateFloatAsState(scale, androidx.compose.animation.core.tween(220), label = "breath")
+        Box(Modifier.fillMaxWidth().height(260.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(240.dp).androidx_scale(sc).clip(RoundedCornerShape(120.dp)).background(com.phani.widgets.ui.Signal.copy(alpha = 0.12f)))
+            Box(Modifier.size(180.dp).androidx_scale(sc).clip(RoundedCornerShape(90.dp)).background(com.phani.widgets.ui.Signal.copy(alpha = 0.22f)))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(if (finished != null) "Well done" else phase, style = T.h3, color = p.ink)
+                if (running) {
+                    val left = (mins * 60_000L - elapsed).coerceAtLeast(0) / 1000
+                    Text(String.format(java.util.Locale.US, "%d:%02d", left / 60, left % 60), style = T.body, color = p.muted)
+                } else if (finished != null) Text("${finished} min added", style = T.body, color = p.muted)
+            }
+        }
+        if (!running) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1, 3, 5, 10, 15, 20).forEach { m ->
+                    val on = m == mins
+                    Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(14.dp)).background(if (on) p.ink else p.card).clickable { mins = m },
+                        contentAlignment = Alignment.Center) { Text("$m", style = T.bodyB, color = if (on) p.paper else p.ink) }
+                }
+            }
+            Text("minutes", style = T.small, color = p.muted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            BigButton(if (finished != null) "Again" else "Begin") { finished = null; startAt = System.currentTimeMillis(); elapsed = 0; running = true }
+            if (finished != null) BigButton("Done", kind = "ghost") { finish() }
+        } else {
+            BigButton("End now", kind = "ghost") { log(elapsed) }
+        }
+    }
+
+    private fun Modifier.androidx_scale(s: Float) = this.then(Modifier.graphicsLayer(scaleX = s, scaleY = s))
 
     /* ---------- Streak: today and yesterday ---------- */
 
